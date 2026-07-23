@@ -1,106 +1,114 @@
 import Link from "next/link";
-import { MessageCircle, Heart, Shield, Lock, Sparkles, ArrowRight, Wind, BookOpen } from "lucide-react";
+import { ArrowRight, MessageCircle, Wind, BookOpen, Heart, Shield } from "lucide-react";
 
-const features = [
+const journeys = [
   {
-    icon: MessageCircle,
-    title: "AI 情感支持",
-    description: "温暖、专业的 AI 咨询助手，随时倾听你的感受，提供情绪引导和支持。",
     href: "/chat",
-    color: "from-indigo-500 to-purple-600",
+    title: "倾诉",
+    description: "与心语对话，在不被评判的空间里整理感受。",
+    icon: MessageCircle,
   },
   {
-    icon: Heart,
-    title: "情绪追踪",
-    description: "记录每日情绪变化，发现情绪模式，更好地了解自己。",
-    href: "/mood",
-    color: "from-pink-500 to-rose-600",
-  },
-  {
-    icon: Wind,
-    title: "正念练习",
-    description: "呼吸训练、五感接地、身体扫描与应对技巧，帮助你回到当下。",
     href: "/practice",
-    color: "from-sky-500 to-cyan-600",
+    title: "安住",
+    description: "呼吸、接地与身体扫描，把注意力带回当下。",
+    icon: Wind,
   },
   {
-    icon: BookOpen,
-    title: "情绪日记",
-    description: "在私密空间书写感受，配合写作提示，整理思绪与自我对话。",
     href: "/journal",
-    color: "from-amber-500 to-orange-600",
+    title: "书写",
+    description: "用私密日记把情绪落成文字，慢慢看清自己。",
+    icon: BookOpen,
   },
   {
-    icon: Shield,
-    title: "隐私至上",
-    description: "数据加密存储在本地，无需注册，零追踪，你完全掌控自己的数据。",
-    href: "/privacy",
-    color: "from-green-500 to-emerald-600",
+    href: "/mood",
+    title: "觉察",
+    description: "记录情绪起伏，发现属于你的内在节奏。",
+    icon: Heart,
   },
-];
-
-const privacyPoints = [
-  "所有数据存储在您的设备本地",
-  "可选 AES-256-GCM 端到端加密",
-  "无需注册，完全匿名使用",
-  "无 Cookie 追踪，无第三方分析",
-  "支持无痕模式，对话不留痕迹",
-  "随时导出或永久删除所有数据",
 ];
 
 export default function HomePage() {
   return (
-    <div className="md:ml-64">
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/50 via-transparent to-purple-100/50" />
-        <div className="relative max-w-4xl mx-auto px-4 py-16 md:py-24 text-center">
-          <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <Lock className="w-4 h-4" />
-            隐私优先 · 本地存储 · 端到端加密
+    <div className="page-shell">
+      {/* Hero — one composition */}
+      <section className="relative min-h-[100svh] flex items-center overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_42%,rgba(43,106,99,0.28),transparent_55%),linear-gradient(180deg,rgba(243,247,246,0.15)_0%,rgba(233,226,214,0.62)_100%)]" />
+          <div className="absolute right-[-10%] top-[6%] w-[min(78vw,42rem)] aspect-square">
+            <div className="relative w-full h-full">
+              <div className="absolute inset-[10%] rounded-full bg-gradient-to-br from-teal-mid/50 via-teal/30 to-sand/60 blur-3xl" />
+              <div className="absolute inset-[22%] rounded-full bg-gradient-to-tr from-teal-deep/35 via-teal-mid/20 to-transparent" />
+              <div className="hero-ripples absolute inset-[8%]">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="absolute inset-[30%] rounded-full border border-teal/25 bg-white/25 backdrop-blur-[1px] shadow-[inset_0_0_60px_rgba(43,106,99,0.12)]" />
+              <div className="absolute inset-[42%] rounded-full bg-gradient-to-br from-white/40 to-teal-soft/30" />
+            </div>
           </div>
+        </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
-            一个安全的空间
-            <br />
-            <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              倾听你的心声
-            </span>
-          </h1>
-
-          <p className="text-lg text-gray-600 mt-6 max-w-2xl mx-auto leading-relaxed">
-            心语是一个隐私优先的 AI 心理健康支持平台。
-            在这里，你可以自由表达感受，获得温暖的陪伴和专业引导——
-            所有数据都安全地存储在你的设备上。
+        <div className="relative w-full max-w-5xl mx-auto px-6 md:px-10 py-24 md:py-0">
+          <p className="brand-mark animate-rise text-5xl sm:text-6xl md:text-7xl font-semibold text-ink tracking-[0.08em]">
+            心语
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
-            <Link href="/chat" className="btn-primary flex items-center justify-center gap-2 text-base">
-              <Sparkles className="w-5 h-5" />
+          <h1 className="animate-rise-delay-1 mt-6 text-2xl sm:text-3xl md:text-4xl font-medium text-ink/90 max-w-xl leading-snug">
+            一个安静的空间，倾听你的心声
+          </h1>
+
+          <p className="animate-rise-delay-2 mt-5 text-base md:text-lg text-ink-soft max-w-md leading-relaxed">
+            隐私优先的 AI 情感支持。对话、情绪与日记都留在你的设备上。
+          </p>
+
+          <div className="animate-rise-delay-3 mt-10 flex flex-col sm:flex-row gap-3">
+            <Link href="/chat" className="btn-primary text-base px-8">
               开始咨询
+              <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/practice" className="btn-secondary flex items-center justify-center gap-2 text-base">
-              <Wind className="w-5 h-5" />
-              试试正念练习
+            <Link href="/practice" className="btn-secondary text-base px-8">
+              正念练习
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="max-w-5xl mx-auto px-4 py-12">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature) => {
-            const Icon = feature.icon;
+      {/* Journeys — one job */}
+      <section className="max-w-5xl mx-auto px-6 md:px-10 py-20 md:py-28">
+        <div className="max-w-xl mb-12">
+          <h2 className="font-display text-3xl md:text-4xl font-semibold text-ink tracking-tight">
+            四种回到自己的方式
+          </h2>
+          <p className="page-subtitle mt-3 text-base">
+            不必一次做完。选此刻最需要的那一条路。
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-x-10 gap-y-12">
+          {journeys.map((item, index) => {
+            const Icon = item.icon;
             return (
-              <Link key={feature.href} href={feature.href} className="card group hover:shadow-md transition-all duration-300">
-                <div className={`w-12 h-12 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
-                <div className="flex items-center gap-1 text-indigo-600 text-sm font-medium mt-4 group-hover:gap-2 transition-all">
-                  了解更多 <ArrowRight className="w-4 h-4" />
+              <Link
+                key={item.href}
+                href={item.href}
+                className="group block border-t border-[var(--line)] pt-6 transition-colors hover:border-teal/40"
+                style={{ animationDelay: `${index * 0.06}s` }}
+              >
+                <div className="flex items-start gap-4">
+                  <Icon className="w-5 h-5 text-teal mt-1 shrink-0 transition-transform duration-300 group-hover:translate-x-0.5" />
+                  <div>
+                    <h3 className="font-display text-2xl font-medium text-ink group-hover:text-teal-deep transition-colors">
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 text-sm text-ink-soft leading-relaxed">
+                      {item.description}
+                    </p>
+                    <span className="inline-flex items-center gap-1 mt-4 text-sm text-teal font-medium opacity-80 group-hover:opacity-100 group-hover:gap-2 transition-all">
+                      进入 <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
                 </div>
               </Link>
             );
@@ -108,49 +116,44 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Privacy section */}
-      <section className="max-w-5xl mx-auto px-4 py-12">
-        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-100">
-          <div className="flex flex-col md:flex-row gap-8 items-center">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                你的隐私，我们的首要承诺
-              </h2>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                心理健康数据极其敏感。我们采用隐私优先架构，
-                确保你的每一次倾诉都安全无忧。
-              </p>
-              <ul className="space-y-3">
-                {privacyPoints.map((point) => (
-                  <li key={point} className="flex items-center gap-3 text-sm text-gray-700">
-                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Shield className="w-3 h-3 text-green-600" />
-                    </div>
-                    {point}
-                  </li>
-                ))}
-              </ul>
+      {/* Privacy — one job */}
+      <section className="max-w-5xl mx-auto px-6 md:px-10 pb-20 md:pb-28">
+        <div className="relative overflow-hidden rounded-[1.75rem] border border-[var(--line)] bg-gradient-to-br from-teal-deep via-teal to-teal-mid text-white px-8 py-12 md:px-14 md:py-16">
+          <div
+            className="absolute -right-16 -top-20 w-72 h-72 rounded-full bg-white/10 blur-2xl"
+            aria-hidden="true"
+          />
+          <div
+            className="absolute -left-10 bottom-0 w-56 h-56 rounded-full bg-sand/20 blur-2xl"
+            aria-hidden="true"
+          />
+
+          <div className="relative max-w-2xl">
+            <div className="flex items-center gap-2 text-white/80 text-sm mb-5">
+              <Shield className="w-4 h-4" />
+              <span>隐私承诺</span>
             </div>
-            <div className="w-full md:w-64 h-64 bg-white/60 rounded-2xl flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Lock className="w-10 h-10 text-white" />
-                </div>
-                <p className="text-sm font-medium text-gray-700">AES-256-GCM</p>
-                <p className="text-xs text-gray-500 mt-1">军事级加密标准</p>
-              </div>
-            </div>
+            <h2 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">
+              你的心事，只属于你
+            </h2>
+            <p className="mt-4 text-white/80 leading-relaxed max-w-lg">
+              本地存储、可选端到端加密、无需注册。我们不为追踪而设计——你随时可以导出或彻底清空。
+            </p>
+            <Link
+              href="/privacy"
+              className="inline-flex items-center gap-2 mt-8 bg-white text-teal-deep font-medium px-6 py-3 rounded-xl hover:bg-foam transition-colors"
+            >
+              打开隐私中心
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Disclaimer */}
-      <section className="max-w-5xl mx-auto px-4 py-8 pb-16">
-        <div className="text-center text-xs text-gray-400 space-y-1">
-          <p>心语提供 AI 情感支持，不能替代专业心理咨询、诊断或治疗。</p>
-          <p>如遇心理危机，请拨打全国心理援助热线：400-161-9995</p>
-        </div>
-      </section>
+      <footer className="max-w-5xl mx-auto px-6 md:px-10 pb-16 text-center text-xs text-ink-soft/80 space-y-1">
+        <p>心语提供 AI 情感支持，不能替代专业心理咨询、诊断或治疗。</p>
+        <p>如遇心理危机，请拨打全国心理援助热线：400-161-9995</p>
+      </footer>
     </div>
   );
 }

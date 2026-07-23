@@ -2,7 +2,7 @@ import JournalWriter from "@/components/JournalWriter";
 
 export default function JournalPage() {
   return (
-    <div className="md:ml-64">
+    <div className="page-shell">
       <JournalWriter />
     </div>
   );

@@ -49,7 +49,7 @@ export const CRISIS_RESPONSE = `我注意到你正在经历非常痛苦的时刻
 
 export const MOOD_LABELS = ["非常低落", "有些低落", "平静", "还不错", "很好"];
 export const MOOD_EMOJIS = ["😔", "😕", "😐", "🙂", "😊"];
-export const MOOD_COLORS = ["#6366f1", "#818cf8", "#a5b4fc", "#34d399", "#10b981"];
+export const MOOD_COLORS = ["#7a8f8c", "#5f8a84", "#3d857c", "#2b6a63", "#1d4a45"];
 
 export const MOOD_TAGS = [
   "焦虑", "压力", "悲伤", "愤怒", "孤独",

@@ -2,7 +2,7 @@ import MoodTracker from "@/components/MoodTracker";
 
 export default function MoodPage() {
   return (
-    <div className="md:ml-64">
+    <div className="page-shell">
       <MoodTracker />
     </div>
   );
