@@ -208,7 +208,7 @@ export default function JournalWriter() {
             </button>
             <button
               onClick={() => {
-                setEditing(false);
+                resetEditor();
                 setMessage("");
               }}
               className="btn-secondary flex items-center gap-2"
