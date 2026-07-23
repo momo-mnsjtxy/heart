@@ -34,17 +34,18 @@ export default function HomePage() {
       {/* Hero — one composition */}
       <section className="relative min-h-[100svh] flex items-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_40%,rgba(43,106,99,0.22),transparent_58%),linear-gradient(180deg,rgba(243,247,246,0.2)_0%,rgba(233,226,214,0.55)_100%)]" />
-          <div className="absolute right-[-8%] top-[12%] w-[min(72vw,38rem)] aspect-square">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_42%,rgba(43,106,99,0.28),transparent_55%),linear-gradient(180deg,rgba(243,247,246,0.15)_0%,rgba(233,226,214,0.62)_100%)]" />
+          <div className="absolute right-[-10%] top-[6%] w-[min(78vw,42rem)] aspect-square">
             <div className="relative w-full h-full">
-              <div className="absolute inset-[18%] rounded-full bg-gradient-to-br from-teal-mid/40 via-teal/25 to-sand/50 blur-2xl" />
-              <div className="absolute inset-[28%] rounded-full bg-gradient-to-tr from-teal-deep/30 to-transparent" />
-              <div className="hero-ripples absolute inset-[12%]">
+              <div className="absolute inset-[10%] rounded-full bg-gradient-to-br from-teal-mid/50 via-teal/30 to-sand/60 blur-3xl" />
+              <div className="absolute inset-[22%] rounded-full bg-gradient-to-tr from-teal-deep/35 via-teal-mid/20 to-transparent" />
+              <div className="hero-ripples absolute inset-[8%]">
                 <span />
                 <span />
                 <span />
               </div>
-              <div className="absolute inset-[34%] rounded-full border border-teal/20 bg-white/20 backdrop-blur-[2px]" />
+              <div className="absolute inset-[30%] rounded-full border border-teal/25 bg-white/25 backdrop-blur-[1px] shadow-[inset_0_0_60px_rgba(43,106,99,0.12)]" />
+              <div className="absolute inset-[42%] rounded-full bg-gradient-to-br from-white/40 to-teal-soft/30" />
             </div>
           </div>
         </div>
