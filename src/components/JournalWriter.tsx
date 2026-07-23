@@ -5,16 +5,13 @@ import { Plus, Trash2, BookOpen, Sparkles, Save, X } from "lucide-react";
 import type { JournalEntry, PrivacySettings } from "@/types";
 import { JOURNAL_PROMPTS } from "@/lib/practices";
 import { MOOD_EMOJIS, MOOD_LABELS } from "@/lib/counselor";
+import { generateId, formatDateTime } from "@/lib/id";
 import {
   saveJournalEntry,
   getAllJournalEntries,
   deleteJournalEntry,
   getPrivacySettings,
 } from "@/lib/storage";
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
 
 export default function JournalWriter() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -32,12 +29,18 @@ export default function JournalWriter() {
   }, []);
 
   async function load() {
-    const [all, settings] = await Promise.all([
-      getAllJournalEntries(),
-      getPrivacySettings(),
-    ]);
-    setEntries(all);
-    setPrivacySettings(settings);
+    try {
+      const [all, settings] = await Promise.all([
+        getAllJournalEntries(),
+        getPrivacySettings(),
+      ]);
+      setEntries(all);
+      setPrivacySettings(settings);
+    } catch {
+      setEntries([]);
+      setPrivacySettings(null);
+      setMessage("无法读取本地数据，请稍后重试或检查隐私中心加密状态");
+    }
   }
 
   function startNew(prompt?: (typeof JOURNAL_PROMPTS)[number]) {
@@ -47,6 +50,7 @@ export default function JournalWriter() {
     setContent(prompt ? `${prompt.text}\n\n` : "");
     setMood(undefined);
     setEditing(true);
+    setMessage("");
   }
 
   function startEdit(entry: JournalEntry) {
@@ -56,11 +60,27 @@ export default function JournalWriter() {
     setContent(entry.content);
     setMood(entry.mood);
     setEditing(true);
+    setMessage("");
+  }
+
+  function resetEditor() {
+    setEditing(false);
+    setTitle("");
+    setContent("");
+    setPromptId(undefined);
+    setMood(undefined);
+    setEditId(null);
   }
 
   async function handleSave() {
     if (!content.trim()) {
       setMessage("请先写下一些内容");
+      return;
+    }
+
+    // Persistence disabled: keep draft visible so the user doesn't lose text
+    if (privacySettings?.saveJournalData === false) {
+      setMessage("已关闭日记保存，本次内容不会写入本地");
       return;
     }
 
@@ -78,30 +98,23 @@ export default function JournalWriter() {
       updatedAt: now,
     };
 
-    if (privacySettings?.saveJournalData !== false) {
-      try {
-        await saveJournalEntry(entry);
-        await load();
-        setMessage("日记已保存到本地");
-      } catch {
-        setMessage("保存失败：如已启用加密，请先在隐私中心解锁");
-        return;
-      }
-    } else {
-      setMessage("已关闭日记保存，本次内容不会写入本地");
+    try {
+      await saveJournalEntry(entry);
+      await load();
+      setMessage("日记已保存到本地");
+      resetEditor();
+    } catch {
+      setMessage("保存失败：如已启用加密，请先在隐私中心解锁");
     }
-
-    setEditing(false);
-    setTitle("");
-    setContent("");
-    setPromptId(undefined);
-    setMood(undefined);
-    setEditId(null);
   }
 
   async function handleDelete(id: string) {
-    await deleteJournalEntry(id);
-    await load();
+    try {
+      await deleteJournalEntry(id);
+      await load();
+    } catch {
+      setMessage("删除失败：如已启用加密，请先在隐私中心解锁");
+    }
   }
 
   return (
@@ -222,7 +235,7 @@ export default function JournalWriter() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-medium text-gray-900">{entry.title}</h3>
                   <span className="text-xs text-gray-400">
-                    {new Date(entry.updatedAt).toLocaleString("zh-CN")}
+                    {formatDateTime(entry.updatedAt)}
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 mt-1 line-clamp-3 whitespace-pre-wrap">

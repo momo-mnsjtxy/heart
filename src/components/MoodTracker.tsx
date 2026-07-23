@@ -5,11 +5,8 @@ import Link from "next/link";
 import { Plus, Trash2, TrendingUp, Sparkles } from "lucide-react";
 import type { MoodEntry, PrivacySettings } from "@/types";
 import { MOOD_LABELS, MOOD_EMOJIS, MOOD_COLORS, MOOD_TAGS } from "@/lib/counselor";
+import { generateId, formatDateTime } from "@/lib/id";
 import { saveMoodEntry, getAllMoodEntries, deleteMoodEntry, getPrivacySettings } from "@/lib/storage";
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
 
 export default function MoodTracker() {
   const [entries, setEntries] = useState<MoodEntry[]>([]);
@@ -236,7 +233,7 @@ export default function MoodTracker() {
               <div className="flex items-center gap-2">
                 <span className="font-medium text-gray-900">{MOOD_LABELS[entry.mood - 1]}</span>
                 <span className="text-xs text-gray-400">
-                  {new Date(entry.timestamp).toLocaleString("zh-CN")}
+                  {formatDateTime(entry.timestamp)}
                 </span>
               </div>
               {entry.note && <p className="text-sm text-gray-600 mt-1">{entry.note}</p>}

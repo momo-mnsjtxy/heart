@@ -125,19 +125,14 @@ export async function getSession(id: string): Promise<ChatSession | null> {
 
 export async function getAllSessions(): Promise<ChatSession[]> {
   const db = await getDB();
-  const keys = await db.getAllKeys("sessions");
+  const storedEntries = await db.getAll("sessions");
   const key = await getDataKey();
-  const sessions: ChatSession[] = [];
-  for (const storeKey of keys) {
-    const stored = await db.get("sessions", storeKey);
-    if (stored) {
-      try {
-        sessions.push(await decrypt<ChatSession>(stored, key));
-      } catch {
-        // Skip undecryptable entries (e.g. locked encryption)
-      }
-    }
-  }
+  const results = await Promise.allSettled(
+    storedEntries.map((stored) => decrypt<ChatSession>(stored, key))
+  );
+  const sessions = results
+    .filter((r): r is PromiseFulfilledResult<ChatSession> => r.status === "fulfilled")
+    .map((r) => r.value);
   return sessions.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
@@ -155,19 +150,14 @@ export async function saveMoodEntry(entry: MoodEntry): Promise<void> {
 
 export async function getAllMoodEntries(): Promise<MoodEntry[]> {
   const db = await getDB();
-  const keys = await db.getAllKeys("moods");
+  const storedEntries = await db.getAll("moods");
   const key = await getDataKey();
-  const entries: MoodEntry[] = [];
-  for (const storeKey of keys) {
-    const stored = await db.get("moods", storeKey);
-    if (stored) {
-      try {
-        entries.push(await decrypt<MoodEntry>(stored, key));
-      } catch {
-        // Skip undecryptable entries
-      }
-    }
-  }
+  const results = await Promise.allSettled(
+    storedEntries.map((stored) => decrypt<MoodEntry>(stored, key))
+  );
+  const entries = results
+    .filter((r): r is PromiseFulfilledResult<MoodEntry> => r.status === "fulfilled")
+    .map((r) => r.value);
   return entries.sort((a, b) => b.timestamp - a.timestamp);
 }
 
@@ -185,19 +175,14 @@ export async function saveJournalEntry(entry: JournalEntry): Promise<void> {
 
 export async function getAllJournalEntries(): Promise<JournalEntry[]> {
   const db = await getDB();
-  const keys = await db.getAllKeys("journals");
+  const storedEntries = await db.getAll("journals");
   const key = await getDataKey();
-  const entries: JournalEntry[] = [];
-  for (const storeKey of keys) {
-    const stored = await db.get("journals", storeKey);
-    if (stored) {
-      try {
-        entries.push(await decrypt<JournalEntry>(stored, key));
-      } catch {
-        // Skip undecryptable entries
-      }
-    }
-  }
+  const results = await Promise.allSettled(
+    storedEntries.map((stored) => decrypt<JournalEntry>(stored, key))
+  );
+  const entries = results
+    .filter((r): r is PromiseFulfilledResult<JournalEntry> => r.status === "fulfilled")
+    .map((r) => r.value);
   return entries.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
@@ -215,19 +200,14 @@ export async function savePracticeLog(log: PracticeLog): Promise<void> {
 
 export async function getAllPracticeLogs(): Promise<PracticeLog[]> {
   const db = await getDB();
-  const keys = await db.getAllKeys("practices");
+  const storedEntries = await db.getAll("practices");
   const key = await getDataKey();
-  const logs: PracticeLog[] = [];
-  for (const storeKey of keys) {
-    const stored = await db.get("practices", storeKey);
-    if (stored) {
-      try {
-        logs.push(await decrypt<PracticeLog>(stored, key));
-      } catch {
-        // Skip undecryptable entries
-      }
-    }
-  }
+  const results = await Promise.allSettled(
+    storedEntries.map((stored) => decrypt<PracticeLog>(stored, key))
+  );
+  const logs = results
+    .filter((r): r is PromiseFulfilledResult<PracticeLog> => r.status === "fulfilled")
+    .map((r) => r.value);
   return logs.sort((a, b) => b.completedAt - a.completedAt);
 }
 

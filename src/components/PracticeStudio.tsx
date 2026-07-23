@@ -23,13 +23,10 @@ import {
   type BreathingPattern,
   type CopingTool,
 } from "@/lib/practices";
+import { generateId, formatShortDateTime } from "@/lib/id";
 import { savePracticeLog, getAllPracticeLogs } from "@/lib/storage";
 
 type Tab = "breathing" | "grounding" | "body-scan" | "coping";
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
 
 const TABS: { id: Tab; label: string; icon: typeof Wind }[] = [
   { id: "breathing", label: "呼吸", icon: Wind },
@@ -127,12 +124,7 @@ export default function PracticeStudio() {
                   {log.label}
                 </span>
                 <span className="text-xs text-gray-400">
-                  {new Date(log.completedAt).toLocaleString("zh-CN", {
-                    month: "numeric",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatShortDateTime(log.completedAt)}
                   {log.durationSec > 0 ? ` · ${log.durationSec}s` : ""}
                 </span>
               </li>

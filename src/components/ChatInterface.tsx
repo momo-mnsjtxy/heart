@@ -4,11 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Send, Shield, Trash2, Plus, MessageCircle, Wind, BookOpen } from "lucide-react";
 import type { Message, ChatSession, PrivacySettings } from "@/types";
+import { generateId } from "@/lib/id";
 import { saveSession, getAllSessions, deleteSession, getPrivacySettings } from "@/lib/storage";
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
 
 export default function ChatInterface() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
