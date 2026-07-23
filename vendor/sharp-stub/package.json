@@ -1,0 +1,7 @@
+{
+  "name": "sharp",
+  "version": "0.35.3",
+  "description": "Stub: this app disables Next.js image optimization and does not ship sharp/libvips.",
+  "main": "index.js",
+  "license": "MIT"
+}
