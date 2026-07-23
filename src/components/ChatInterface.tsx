@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Shield, Trash2, Plus, MessageCircle } from "lucide-react";
-import type { Message, ChatSession } from "@/types";
+import type { Message, ChatSession, PrivacySettings } from "@/types";
 import { saveSession, getAllSessions, deleteSession, getPrivacySettings } from "@/lib/storage";
 
 function generateId(): string {
@@ -15,6 +15,7 @@ export default function ChatInterface() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [ephemeral, setEphemeral] = useState(false);
+  const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -25,13 +26,14 @@ export default function ChatInterface() {
 
   useEffect(() => {
     async function init() {
+      const settings = await getPrivacySettings();
+      setPrivacySettings(settings);
+      setEphemeral(settings.ephemeralMode);
       const all = await getAllSessions();
       setSessions(all);
       if (all.length > 0) {
         setCurrentSession(all[0]);
       }
-      const settings = await getPrivacySettings();
-      setEphemeral(settings.ephemeralMode);
     }
     init();
   }, []);
@@ -122,7 +124,11 @@ export default function ChatInterface() {
 
       setCurrentSession(finalSession);
 
-      if (!ephemeral) {
+      // Persist only when global "保存对话记录" is on and session is not ephemeral
+      const shouldSaveConversations = privacySettings?.saveConversations !== false;
+      const shouldPersistSession = shouldSaveConversations && !ephemeral;
+
+      if (shouldPersistSession) {
         await saveSession(finalSession);
         await loadSessions();
       }
@@ -242,7 +248,9 @@ export default function ChatInterface() {
                 {currentSession?.title || "心语咨询"}
               </h2>
               <p className="text-xs text-gray-500">
-                {ephemeral ? "🔒 无痕模式 · 对话不会保存" : "🔒 对话加密存储在本地"}
+                {ephemeral || privacySettings?.saveConversations === false
+                  ? "🔒 对话不会保存到本地"
+                  : "🔒 对话加密存储在本地"}
               </p>
             </div>
           </div>

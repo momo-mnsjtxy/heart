@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Trash2, TrendingUp } from "lucide-react";
-import type { MoodEntry } from "@/types";
+import type { MoodEntry, PrivacySettings } from "@/types";
 import { MOOD_LABELS, MOOD_EMOJIS, MOOD_COLORS, MOOD_TAGS } from "@/lib/counselor";
-import { saveMoodEntry, getAllMoodEntries, deleteMoodEntry } from "@/lib/storage";
+import { saveMoodEntry, getAllMoodEntries, deleteMoodEntry, getPrivacySettings } from "@/lib/storage";
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -16,14 +16,21 @@ export default function MoodTracker() {
   const [note, setNote] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
 
   useEffect(() => {
     loadEntries();
+    loadPrivacySettings();
   }, []);
 
   async function loadEntries() {
     const all = await getAllMoodEntries();
     setEntries(all);
+  }
+
+  async function loadPrivacySettings() {
+    const settings = await getPrivacySettings();
+    setPrivacySettings(settings);
   }
 
   async function handleSave() {
@@ -34,8 +41,13 @@ export default function MoodTracker() {
       tags: selectedTags,
       timestamp: Date.now(),
     };
-    await saveMoodEntry(entry);
-    await loadEntries();
+
+    // Respect privacy settings: only persist when "保存情绪数据" is enabled
+    if (privacySettings?.saveMoodData !== false) {
+      await saveMoodEntry(entry);
+      await loadEntries();
+    }
+
     setNote("");
     setSelectedTags([]);
     setSelectedMood(3);
@@ -63,7 +75,11 @@ export default function MoodTracker() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">情绪记录</h1>
-          <p className="text-gray-500 text-sm mt-1">追踪你的情绪变化，数据仅存储在本地</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {privacySettings?.saveMoodData === false
+              ? "已关闭情绪数据保存，本次记录不会写入本地"
+              : "追踪你的情绪变化，数据仅存储在本地"}
+          </p>
         </div>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2 text-sm">
           <Plus className="w-4 h-4" />

@@ -9,7 +9,7 @@ import type { PrivacySettings } from "@/types";
 import {
   getPrivacySettings, savePrivacySettings, exportAllData,
   deleteAllData, getStorageStats, setEncryptionPassphrase,
-  clearEncryptionPassphrase,
+  clearEncryptionPassphrase, unlockEncryption, isEncryptionUnlocked,
 } from "@/lib/storage";
 
 export default function PrivacyDashboard() {
@@ -17,7 +17,9 @@ export default function PrivacyDashboard() {
   const [stats, setStats] = useState({ sessions: 0, moods: 0, encrypted: false });
   const [passphrase, setPassphrase] = useState("");
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
+  const [unlockPassphrase, setUnlockPassphrase] = useState("");
   const [showPassphrase, setShowPassphrase] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -29,6 +31,7 @@ export default function PrivacyDashboard() {
     const [s, st] = await Promise.all([getPrivacySettings(), getStorageStats()]);
     setSettings(s);
     setStats(st);
+    setUnlocked(isEncryptionUnlocked());
   }
 
   async function updateSetting(key: keyof PrivacySettings, value: boolean) {
@@ -48,34 +51,59 @@ export default function PrivacyDashboard() {
       showMessage("两次输入的密码不一致");
       return;
     }
-    await setEncryptionPassphrase(passphrase);
-    setPassphrase("");
-    setConfirmPassphrase("");
-    await loadData();
-    showMessage("加密已启用，请牢记您的密码");
+    try {
+      await setEncryptionPassphrase(passphrase);
+      setPassphrase("");
+      setConfirmPassphrase("");
+      await loadData();
+      showMessage("加密已启用。密码不会被存储，请牢记您的密码");
+    } catch {
+      showMessage("启用加密失败，请重试");
+    }
+  }
+
+  async function handleUnlock() {
+    if (!unlockPassphrase) {
+      showMessage("请输入加密密码");
+      return;
+    }
+    try {
+      await unlockEncryption(unlockPassphrase);
+      setUnlockPassphrase("");
+      setUnlocked(true);
+      showMessage("已解锁，本页会话期间可读写加密数据");
+    } catch {
+      showMessage("密码错误或密钥损坏");
+    }
   }
 
   async function handleDisableEncryption() {
     await clearEncryptionPassphrase();
+    setUnlocked(false);
     await loadData();
     showMessage("加密已关闭");
   }
 
   async function handleExport() {
-    const data = await exportAllData();
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `heart-export-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showMessage("数据已导出");
+    try {
+      const data = await exportAllData();
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `heart-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showMessage("数据已导出");
+    } catch {
+      showMessage("导出失败：如已启用加密，请先解锁");
+    }
   }
 
   async function handleDeleteAll() {
     await deleteAllData();
     setShowDeleteConfirm(false);
+    setUnlocked(false);
     await loadData();
     showMessage("所有数据已永久删除");
   }
@@ -89,7 +117,7 @@ export default function PrivacyDashboard() {
 
   const privacyFeatures = [
     { icon: Database, title: "本地优先存储", desc: "所有数据存储在您的浏览器中，不上传至服务器" },
-    { icon: Lock, title: "客户端加密", desc: "可选 AES-256-GCM 加密，密钥永不离开您的设备" },
+    { icon: Lock, title: "客户端加密", desc: "随机数据密钥经密码包裹后存储，密码本身永不落盘" },
     { icon: Eye, title: "零追踪", desc: "无 Cookie 追踪、无分析工具、无第三方数据共享" },
     { icon: Shield, title: "无痕模式", desc: "支持完全不保存对话的临时咨询模式" },
     { icon: Trash2, title: "完全控制", desc: "随时导出或永久删除您的所有数据" },
@@ -110,7 +138,6 @@ export default function PrivacyDashboard() {
         </div>
       )}
 
-      {/* Privacy principles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {privacyFeatures.map((feature) => {
           const Icon = feature.icon;
@@ -128,7 +155,6 @@ export default function PrivacyDashboard() {
         })}
       </div>
 
-      {/* Storage stats */}
       <div className="card">
         <h2 className="font-medium text-gray-900 mb-4">本地数据统计</h2>
         <div className="grid grid-cols-3 gap-4 text-center">
@@ -142,14 +168,13 @@ export default function PrivacyDashboard() {
           </div>
           <div>
             <div className="text-2xl font-bold text-purple-600">
-              {stats.encrypted ? "已加密" : "未加密"}
+              {stats.encrypted ? (unlocked ? "已解锁" : "已加密") : "未加密"}
             </div>
             <div className="text-xs text-gray-500">加密状态</div>
           </div>
         </div>
       </div>
 
-      {/* Settings */}
       <div className="card space-y-4">
         <h2 className="font-medium text-gray-900">隐私设置</h2>
 
@@ -173,7 +198,6 @@ export default function PrivacyDashboard() {
         ))}
       </div>
 
-      {/* Encryption */}
       <div className="card space-y-4">
         <div className="flex items-center gap-2">
           <Lock className="w-5 h-5 text-indigo-600" />
@@ -181,11 +205,30 @@ export default function PrivacyDashboard() {
         </div>
 
         {settings.encryptionEnabled ? (
-          <div>
-            <div className="flex items-center gap-2 text-green-600 text-sm mb-3">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-green-600 text-sm">
               <CheckCircle className="w-4 h-4" />
-              加密已启用 (AES-256-GCM)
+              加密已启用 (AES-256-GCM · 密码不落盘)
             </div>
+            <p className="text-xs text-gray-500">
+              仅存储经密码包裹的随机数据密钥；密码本身不会写入 IndexedDB。刷新页面后需重新解锁。
+            </p>
+
+            {!unlocked && (
+              <div className="space-y-2 pt-1">
+                <input
+                  type="password"
+                  value={unlockPassphrase}
+                  onChange={(e) => setUnlockPassphrase(e.target.value)}
+                  placeholder="输入密码以解锁本会话"
+                  className="input-field"
+                />
+                <button onClick={handleUnlock} className="btn-primary text-sm">
+                  解锁加密数据
+                </button>
+              </div>
+            )}
+
             <button onClick={handleDisableEncryption} className="btn-danger text-sm">
               关闭加密
             </button>
@@ -193,7 +236,7 @@ export default function PrivacyDashboard() {
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-gray-600">
-              设置加密密码后，所有本地数据将使用 AES-256-GCM 加密。密码不会上传至任何服务器。
+              设置加密密码后，将生成随机数据密钥并用您的密码包裹后存储。密码不会上传，也不会以明文保存在本地。
             </p>
             <div className="relative">
               <input
@@ -206,6 +249,7 @@ export default function PrivacyDashboard() {
               <button
                 onClick={() => setShowPassphrase(!showPassphrase)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                type="button"
               >
                 {showPassphrase ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -224,7 +268,6 @@ export default function PrivacyDashboard() {
         )}
       </div>
 
-      {/* Data management */}
       <div className="card space-y-4">
         <h2 className="font-medium text-gray-900">数据管理</h2>
         <div className="flex flex-wrap gap-3">
@@ -242,7 +285,6 @@ export default function PrivacyDashboard() {
         </div>
       </div>
 
-      {/* Delete confirmation */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-fade-in-up">
@@ -261,7 +303,6 @@ export default function PrivacyDashboard() {
         </div>
       )}
 
-      {/* Disclaimer */}
       <div className="card bg-amber-50 border-amber-100">
         <h3 className="font-medium text-amber-800 text-sm mb-2">重要声明</h3>
         <ul className="text-xs text-amber-700 space-y-1">
