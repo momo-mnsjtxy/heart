@@ -168,9 +168,9 @@ export default function ChatInterface() {
       <div
         className={`${
           showSidebar ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 fixed md:relative z-30 w-72 h-full bg-white/80 backdrop-blur-md border-r border-gray-200 transition-transform duration-300 flex flex-col`}
+        } md:translate-x-0 fixed md:relative z-30 w-72 h-full bg-white/70 backdrop-blur-md border-r border-[var(--line)] transition-transform duration-300 flex flex-col`}
       >
-        <div className="p-4 border-b border-gray-100">
+        <div className="p-4 border-b border-[var(--line)]">
           <button onClick={createNewSession} className="btn-primary w-full flex items-center justify-center gap-2 text-sm">
             <Plus className="w-4 h-4" />
             新对话
@@ -183,8 +183,8 @@ export default function ChatInterface() {
               key={session.id}
               className={`group flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all ${
                 currentSession?.id === session.id
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "hover:bg-gray-50 text-gray-700"
+                  ? "bg-teal-soft text-teal-deep"
+                  : "hover:bg-white/45 text-ink-soft"
               }`}
             >
               <button
@@ -199,29 +199,29 @@ export default function ChatInterface() {
               </button>
               <button
                 onClick={() => handleDeleteSession(session.id)}
-                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-1"
+                className="opacity-0 group-hover:opacity-100 text-ink-soft/70 hover:text-red-500 transition-all p-1"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
           {sessions.length === 0 && (
-            <p className="text-center text-gray-400 text-sm py-8">暂无历史对话</p>
+            <p className="text-center text-ink-soft/70 text-sm py-8">暂无历史对话</p>
           )}
         </div>
 
-        <div className="p-4 border-t border-gray-100">
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <div className="p-4 border-t border-[var(--line)]">
+          <label className="flex items-center gap-2 text-sm text-ink-soft cursor-pointer">
             <input
               type="checkbox"
               checked={ephemeral}
               onChange={(e) => setEphemeral(e.target.checked)}
-              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              className="rounded border-[var(--line)] text-teal focus:ring-teal/40"
             />
             <Shield className="w-4 h-4" />
             无痕模式
           </label>
-          <p className="text-xs text-gray-400 mt-1">开启后对话不会保存</p>
+          <p className="text-xs text-ink-soft/70 mt-1">开启后对话不会保存</p>
         </div>
       </div>
 
@@ -233,22 +233,22 @@ export default function ChatInterface() {
       {/* Chat area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-white/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)] bg-white/45 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowSidebar(true)}
-              className="md:hidden text-gray-500 hover:text-gray-700"
+              className="md:hidden text-ink-soft hover:text-ink"
             >
               <MessageCircle className="w-5 h-5" />
             </button>
             <div>
-              <h2 className="font-medium text-gray-900">
+              <h2 className="font-medium text-ink">
                 {currentSession?.title || "心语咨询"}
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-ink-soft">
                 {ephemeral || privacySettings?.saveConversations === false
-                  ? "🔒 对话不会保存到本地"
-                  : "🔒 对话加密存储在本地"}
+                  ? "对话不会保存到本地"
+                  : "对话加密存储在本地"}
               </p>
             </div>
           </div>
@@ -257,13 +257,11 @@ export default function ChatInterface() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
           {!currentSession || currentSession.messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center px-4">
-              <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mb-4">
-                <MessageCircle className="w-8 h-8 text-indigo-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">你好，我是心语</h3>
-              <p className="text-gray-500 text-sm max-w-md mb-6">
-                一个安全、私密的空间，你可以自由表达感受。我不会评判你，只会陪伴和倾听。
+            <div className="flex flex-col items-center justify-center h-full text-center px-4 animate-fade-in-up">
+              <p className="brand-mark text-4xl font-semibold text-ink tracking-[0.06em] mb-3">心语</p>
+              <h3 className="font-display text-xl font-medium text-ink mb-2">你好，这里是安全的</h3>
+              <p className="text-ink-soft text-sm max-w-md mb-8 leading-relaxed">
+                一个私密的空间，你可以自由表达感受。我不会评判你，只会陪伴和倾听。
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg w-full">
                 {[
@@ -278,23 +276,23 @@ export default function ChatInterface() {
                       setInput(prompt);
                       inputRef.current?.focus();
                     }}
-                    className="text-left text-sm p-3 bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-gray-600"
+                    className="text-left text-sm p-3.5 rounded-xl border border-[var(--line)] bg-white/60 hover:border-teal/40 hover:bg-teal-soft/60 transition-all text-ink-soft"
                   >
                     {prompt}
                   </button>
                 ))}
               </div>
-              <div className="flex flex-wrap justify-center gap-3 mt-6">
+              <div className="flex flex-wrap justify-center gap-3 mt-8">
                 <Link
                   href="/practice"
-                  className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-2 rounded-xl"
+                  className="inline-flex items-center gap-2 text-sm text-teal-deep hover:text-teal bg-teal-soft/80 px-3.5 py-2 rounded-xl transition-colors"
                 >
                   <Wind className="w-4 h-4" />
                   先做个呼吸练习
                 </Link>
                 <Link
                   href="/journal"
-                  className="inline-flex items-center gap-2 text-sm text-amber-700 hover:text-amber-800 bg-amber-50 px-3 py-2 rounded-xl"
+                  className="inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink bg-sand/50 px-3.5 py-2 rounded-xl transition-colors"
                 >
                   <BookOpen className="w-4 h-4" />
                   写一篇情绪日记
@@ -309,7 +307,7 @@ export default function ChatInterface() {
               >
                 <div className={message.role === "user" ? "chat-bubble-user" : "chat-bubble-assistant"}>
                   <div className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</div>
-                  <div className={`text-xs mt-1 ${message.role === "user" ? "text-indigo-200" : "text-gray-400"}`}>
+                  <div className={`text-xs mt-1 ${message.role === "user" ? "text-teal-soft" : "text-ink-soft/70"}`}>
                     {new Date(message.timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
                   </div>
                 </div>
@@ -320,9 +318,9 @@ export default function ChatInterface() {
           {isLoading && (
             <div className="flex justify-start">
               <div className="chat-bubble-assistant flex items-center gap-1 py-4">
-                <div className="typing-dot w-2 h-2 bg-indigo-400 rounded-full" />
-                <div className="typing-dot w-2 h-2 bg-indigo-400 rounded-full" />
-                <div className="typing-dot w-2 h-2 bg-indigo-400 rounded-full" />
+                <div className="typing-dot w-2 h-2 bg-teal-mid rounded-full" />
+                <div className="typing-dot w-2 h-2 bg-teal-mid rounded-full" />
+                <div className="typing-dot w-2 h-2 bg-teal-mid rounded-full" />
               </div>
             </div>
           )}
@@ -330,7 +328,7 @@ export default function ChatInterface() {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-gray-100 bg-white/50 backdrop-blur-sm">
+        <div className="p-4 border-t border-[var(--line)] bg-white/45 backdrop-blur-sm">
           <div className="flex items-end gap-3 max-w-3xl mx-auto">
             <textarea
               ref={inputRef}
@@ -350,7 +348,7 @@ export default function ChatInterface() {
               <Send className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-xs text-gray-400 text-center mt-2">
+          <p className="text-xs text-ink-soft/70 text-center mt-2">
             心语提供情感支持，不能替代专业心理咨询。如遇危机请拨打求助热线。
           </p>
         </div>

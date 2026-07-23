@@ -20,7 +20,7 @@ export const BREATHING_PATTERNS: BreathingPattern[] = [
     exhale: 4,
     holdAfter: 4,
     cycles: 4,
-    color: "from-sky-500 to-indigo-500",
+    color: "from-teal-mid to-teal-deep",
   },
   {
     id: "478",
@@ -30,7 +30,7 @@ export const BREATHING_PATTERNS: BreathingPattern[] = [
     hold: 7,
     exhale: 8,
     cycles: 4,
-    color: "from-violet-500 to-fuchsia-500",
+    color: "from-sand-deep to-teal",
   },
   {
     id: "calm",
@@ -40,7 +40,7 @@ export const BREATHING_PATTERNS: BreathingPattern[] = [
     hold: 2,
     exhale: 6,
     cycles: 6,
-    color: "from-teal-500 to-emerald-500",
+    color: "from-teal to-teal-mid",
   },
 ];
 

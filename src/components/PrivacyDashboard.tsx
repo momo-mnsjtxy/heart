@@ -133,12 +133,12 @@ export default function PrivacyDashboard() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">隐私中心</h1>
-        <p className="text-gray-500 text-sm mt-1">您的数据，您做主</p>
+        <h1 className="page-title">隐私中心</h1>
+        <p className="text-ink-soft text-sm mt-1">您的数据，您做主</p>
       </div>
 
       {message && (
-        <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl border border-green-200 flex items-center gap-2 animate-fade-in-up">
+        <div className="bg-teal-soft text-teal-deep px-4 py-3 rounded-xl border border-[var(--line)] flex items-center gap-2 animate-fade-in-up">
           <CheckCircle className="w-4 h-4" />
           {message}
         </div>
@@ -149,12 +149,12 @@ export default function PrivacyDashboard() {
           const Icon = feature.icon;
           return (
             <div key={feature.title} className="card flex gap-3">
-              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon className="w-5 h-5 text-indigo-600" />
+              <div className="w-10 h-10 bg-teal-soft rounded-xl flex items-center justify-center flex-shrink-0">
+                <Icon className="w-5 h-5 text-teal" />
               </div>
               <div>
-                <h3 className="font-medium text-gray-900 text-sm">{feature.title}</h3>
-                <p className="text-xs text-gray-500 mt-0.5">{feature.desc}</p>
+                <h3 className="font-medium text-ink text-sm">{feature.title}</h3>
+                <p className="text-xs text-ink-soft mt-0.5">{feature.desc}</p>
               </div>
             </div>
           );
@@ -162,35 +162,35 @@ export default function PrivacyDashboard() {
       </div>
 
       <div className="card">
-        <h2 className="font-medium text-gray-900 mb-4">本地数据统计</h2>
+        <h2 className="font-medium text-ink mb-4">本地数据统计</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-indigo-600">{stats.sessions}</div>
-            <div className="text-xs text-gray-500">对话记录</div>
+            <div className="text-2xl font-bold text-teal">{stats.sessions}</div>
+            <div className="text-xs text-ink-soft">对话记录</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-green-600">{stats.moods}</div>
-            <div className="text-xs text-gray-500">情绪记录</div>
+            <div className="text-2xl font-bold text-teal-mid">{stats.moods}</div>
+            <div className="text-xs text-ink-soft">情绪记录</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-sky-600">{stats.journals}</div>
-            <div className="text-xs text-gray-500">日记</div>
+            <div className="text-2xl font-bold text-teal">{stats.journals}</div>
+            <div className="text-xs text-ink-soft">日记</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-violet-600">{stats.practices}</div>
-            <div className="text-xs text-gray-500">练习</div>
+            <div className="text-2xl font-bold text-teal-mid">{stats.practices}</div>
+            <div className="text-xs text-ink-soft">练习</div>
           </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-          <div className="text-sm font-medium text-purple-600">
+        <div className="mt-4 pt-4 border-t border-[var(--line)] text-center">
+          <div className="text-sm font-medium text-teal">
             {stats.encrypted ? (unlocked ? "已解锁" : "已加密") : "未加密"}
           </div>
-          <div className="text-xs text-gray-500">加密状态</div>
+          <div className="text-xs text-ink-soft">加密状态</div>
         </div>
       </div>
 
       <div className="card space-y-4">
-        <h2 className="font-medium text-gray-900">隐私设置</h2>
+        <h2 className="font-medium text-ink">隐私设置</h2>
 
         {([
           { key: "saveConversations" as const, label: "保存对话记录", desc: "在本地存储咨询对话" },
@@ -200,14 +200,14 @@ export default function PrivacyDashboard() {
         ]).map((item) => (
           <label key={item.key} className="flex items-center justify-between cursor-pointer">
             <div>
-              <div className="text-sm font-medium text-gray-900">{item.label}</div>
-              <div className="text-xs text-gray-500">{item.desc}</div>
+              <div className="text-sm font-medium text-ink">{item.label}</div>
+              <div className="text-xs text-ink-soft">{item.desc}</div>
             </div>
             <input
               type="checkbox"
               checked={settings[item.key]}
               onChange={(e) => updateSetting(item.key, e.target.checked)}
-              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-5 h-5"
+              className="rounded border-[var(--line)] text-teal focus:ring-teal/40 w-5 h-5"
             />
           </label>
         ))}
@@ -215,17 +215,17 @@ export default function PrivacyDashboard() {
 
       <div className="card space-y-4">
         <div className="flex items-center gap-2">
-          <Lock className="w-5 h-5 text-indigo-600" />
-          <h2 className="font-medium text-gray-900">数据加密</h2>
+          <Lock className="w-5 h-5 text-teal" />
+          <h2 className="font-medium text-ink">数据加密</h2>
         </div>
 
         {settings.encryptionEnabled ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-green-600 text-sm">
+            <div className="flex items-center gap-2 text-teal-mid text-sm">
               <CheckCircle className="w-4 h-4" />
               加密已启用 (AES-256-GCM · 密码不落盘)
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-ink-soft">
               仅存储经密码包裹的随机数据密钥；密码本身不会写入 IndexedDB。刷新页面后需重新解锁。
             </p>
 
@@ -250,7 +250,7 @@ export default function PrivacyDashboard() {
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-ink-soft">
               设置加密密码后，将生成随机数据密钥并用您的密码包裹后存储。密码不会上传，也不会以明文保存在本地。
             </p>
             <div className="relative">
@@ -263,7 +263,7 @@ export default function PrivacyDashboard() {
               />
               <button
                 onClick={() => setShowPassphrase(!showPassphrase)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft/70"
                 type="button"
               >
                 {showPassphrase ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -284,7 +284,7 @@ export default function PrivacyDashboard() {
       </div>
 
       <div className="card space-y-4">
-        <h2 className="font-medium text-gray-900">数据管理</h2>
+        <h2 className="font-medium text-ink">数据管理</h2>
         <div className="flex flex-wrap gap-3">
           <button onClick={handleExport} className="btn-secondary flex items-center gap-2 text-sm">
             <Download className="w-4 h-4" />
@@ -307,7 +307,7 @@ export default function PrivacyDashboard() {
               <AlertTriangle className="w-5 h-5" />
               <h2 className="text-lg font-bold">确认删除</h2>
             </div>
-            <p className="text-gray-600 text-sm mb-6">
+            <p className="text-ink-soft text-sm mb-6">
               此操作将永久删除所有本地存储的对话、情绪、日记、练习记录和设置。此操作不可撤销。
             </p>
             <div className="flex gap-3">
@@ -318,9 +318,9 @@ export default function PrivacyDashboard() {
         </div>
       )}
 
-      <div className="card bg-amber-50 border-amber-100">
-        <h3 className="font-medium text-amber-800 text-sm mb-2">重要声明</h3>
-        <ul className="text-xs text-amber-700 space-y-1">
+      <div className="card bg-sand/40 border-[var(--line)]">
+        <h3 className="font-medium text-ink text-sm mb-2">重要声明</h3>
+        <ul className="text-xs text-ink-soft space-y-1.5 leading-relaxed">
           <li>• 心语提供 AI 情感支持，不能替代专业心理咨询或治疗</li>
           <li>• 对话内容会发送至 AI 服务进行处理，但不会存储在服务器上</li>
           <li>• 如遇紧急心理危机，请立即拨打专业求助热线</li>

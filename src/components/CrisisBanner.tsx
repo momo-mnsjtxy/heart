@@ -16,26 +16,30 @@ export default function CrisisBanner() {
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-full text-sm font-medium border border-red-200 shadow-sm transition-all"
+        className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-crisis-soft hover:bg-[#efd5d1] text-crisis px-3.5 py-2 rounded-xl text-sm font-medium border border-[color-mix(in_srgb,var(--crisis)_18%,white)] transition-all"
       >
         <Phone className="w-4 h-4" />
         <span className="hidden sm:inline">危机求助</span>
       </button>
 
       {showModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-fade-in-up">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
+          <div className="bg-foam border border-[var(--line)] rounded-2xl max-w-md w-full p-6 animate-fade-in-up">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 text-red-600">
+              <div className="flex items-center gap-2 text-crisis">
                 <AlertTriangle className="w-5 h-5" />
-                <h2 className="text-lg font-bold">危机求助资源</h2>
+                <h2 className="text-lg font-semibold font-display">危机求助资源</h2>
               </div>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-ink-soft hover:text-ink transition-colors"
+                aria-label="关闭"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-gray-600 text-sm mb-4">
+            <p className="text-ink-soft text-sm mb-4 leading-relaxed">
               如果你或你认识的人正处于危机中，请立即联系以下专业资源：
             </p>
 
@@ -44,16 +48,18 @@ export default function CrisisBanner() {
                 <a
                   key={resource.phone}
                   href={`tel:${resource.phone}`}
-                  className="block p-4 bg-red-50 rounded-xl border border-red-100 hover:bg-red-100 transition-colors"
+                  className="block p-4 rounded-xl bg-crisis-soft/70 border border-[color-mix(in_srgb,var(--crisis)_14%,white)] hover:bg-crisis-soft transition-colors"
                 >
-                  <div className="font-medium text-gray-900">{resource.name}</div>
-                  <div className="text-xl font-bold text-red-600 mt-1">{resource.phone}</div>
-                  <div className="text-xs text-gray-500 mt-1">{resource.available}</div>
+                  <div className="font-medium text-ink">{resource.name}</div>
+                  <div className="text-xl font-semibold text-crisis mt-1 tracking-wide">
+                    {resource.phone}
+                  </div>
+                  <div className="text-xs text-ink-soft mt-1">{resource.available}</div>
                 </a>
               ))}
             </div>
 
-            <p className="text-xs text-gray-500 mt-4 text-center">
+            <p className="text-xs text-ink-soft mt-4 text-center">
               紧急情况请拨打 120 或前往最近医院急诊科
             </p>
           </div>

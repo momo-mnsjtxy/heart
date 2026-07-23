@@ -18,21 +18,17 @@ export default function Navigation() {
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 flex-col bg-white/70 backdrop-blur-md border-r border-white/50 z-40">
-        <div className="p-6">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <Heart className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">心语</h1>
-              <p className="text-xs text-gray-500">隐私优先 · AI 咨询</p>
-            </div>
+      <nav className="hidden md:flex fixed left-0 top-0 h-full w-64 flex-col z-40 border-r border-[var(--line)] bg-white/55 backdrop-blur-xl">
+        <div className="px-6 pt-8 pb-6">
+          <Link href="/" className="block group">
+            <span className="brand-mark text-3xl font-semibold text-ink tracking-[0.06em] group-hover:text-teal-deep transition-colors">
+              心语
+            </span>
+            <p className="text-xs text-ink-soft mt-1.5 tracking-wide">隐私优先 · AI 咨询</p>
           </Link>
         </div>
 
-        <div className="flex-1 px-4 space-y-1">
+        <div className="flex-1 px-3 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -40,10 +36,10 @@ export default function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? "bg-indigo-50 text-indigo-700 font-medium"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    ? "bg-teal-soft text-teal-deep font-medium"
+                    : "text-ink-soft hover:bg-white/70 hover:text-ink"
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -53,15 +49,14 @@ export default function Navigation() {
           })}
         </div>
 
-        <div className="p-4 m-4 bg-green-50 rounded-xl border border-green-100">
-          <p className="text-xs text-green-700 font-medium">🔒 端到端隐私保护</p>
-          <p className="text-xs text-green-600 mt-1">数据仅存储在您的设备上</p>
+        <div className="m-4 p-4 rounded-xl border border-[var(--line)] bg-gradient-to-br from-teal-soft/80 to-sand/40">
+          <p className="text-xs font-medium text-teal-deep">本地加密 · 零追踪</p>
+          <p className="text-xs text-ink-soft mt-1 leading-relaxed">数据只留在你的设备上</p>
         </div>
       </nav>
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 z-40">
-        <div className="flex justify-around py-1.5 px-1">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--line)] bg-white/85 backdrop-blur-xl">
+        <div className="flex justify-around py-2 px-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -70,7 +65,7 @@ export default function Navigation() {
                 key={item.href}
                 href={item.href}
                 className={`flex flex-col items-center gap-0.5 px-1.5 py-1.5 rounded-lg transition-all min-w-0 ${
-                  isActive ? "text-indigo-600" : "text-gray-500"
+                  isActive ? "text-teal-deep" : "text-ink-soft"
                 }`}
               >
                 <Icon className="w-5 h-5" />

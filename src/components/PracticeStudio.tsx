@@ -70,8 +70,8 @@ export default function PracticeStudio() {
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">正念练习</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">正念练习</h1>
+          <p className="text-ink-soft text-sm mt-1">
             呼吸、接地与应对技巧——全部在本地完成，无需联网
           </p>
         </div>
@@ -94,8 +94,8 @@ export default function PracticeStudio() {
               onClick={() => setTab(item.id)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
                 active
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-white/80 text-gray-600 border border-gray-200 hover:bg-gray-50"
+                  ? "bg-teal text-white shadow-sm"
+                  : "bg-white/70 text-ink-soft border border-[var(--line)] hover:bg-white/45"
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -112,18 +112,18 @@ export default function PracticeStudio() {
 
       {logs.length > 0 && (
         <div className="card">
-          <h2 className="font-medium text-gray-900 mb-3">最近练习</h2>
+          <h2 className="font-medium text-ink mb-3">最近练习</h2>
           <ul className="space-y-2">
             {logs.slice(0, 5).map((log) => (
               <li
                 key={log.id}
-                className="flex items-center justify-between text-sm text-gray-600 py-2 border-b border-gray-100 last:border-0"
+                className="flex items-center justify-between text-sm text-ink-soft py-2 border-b border-[var(--line)] last:border-0"
               >
                 <span className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <CheckCircle2 className="w-4 h-4 text-teal-mid" />
                   {log.label}
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-ink-soft/70">
                   {formatShortDateTime(log.completedAt)}
                   {log.durationSec > 0 ? ` · ${log.durationSec}s` : ""}
                 </span>
@@ -236,13 +236,13 @@ function BreathingPanel({
             onClick={() => selectPattern(p)}
             className={`text-left p-4 rounded-2xl border transition-all ${
               pattern.id === p.id
-                ? "border-indigo-400 bg-indigo-50 shadow-sm"
-                : "border-gray-200 bg-white/80 hover:border-indigo-200"
+                ? "border-teal bg-teal-soft shadow-sm"
+                : "border-[var(--line)] bg-white/70 hover:border-teal/30"
             }`}
           >
             <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${p.color} mb-3`} />
-            <div className="font-medium text-gray-900 text-sm">{p.name}</div>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">{p.description}</p>
+            <div className="font-medium text-ink text-sm">{p.name}</div>
+            <p className="text-xs text-ink-soft mt-1 leading-relaxed">{p.description}</p>
           </button>
         ))}
       </div>
@@ -270,7 +270,7 @@ function BreathingPanel({
           </div>
         </div>
 
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-ink-soft mb-4">
           {done
             ? `太棒了，你完成了 ${pattern.cycles} 轮 ${pattern.name}`
             : `第 ${Math.min(cycle + 1, pattern.cycles)} / ${pattern.cycles} 轮`}
@@ -341,8 +341,8 @@ function GroundingPanel({
   return (
     <div className="card space-y-5">
       <div>
-        <h2 className="font-medium text-gray-900">5-4-3-2-1 接地练习</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="font-medium text-ink">5-4-3-2-1 接地练习</h2>
+        <p className="text-sm text-ink-soft mt-1">
           通过五感把注意力带回当下，适合焦虑或解离时使用。
         </p>
       </div>
@@ -352,7 +352,7 @@ function GroundingPanel({
           <div
             key={s.sense}
             className={`flex-1 h-1.5 rounded-full ${
-              i < step ? "bg-emerald-400" : i === step ? "bg-indigo-500" : "bg-gray-200"
+              i < step ? "bg-teal-mid" : i === step ? "bg-teal-soft0" : "bg-gray-200"
             }`}
           />
         ))}
@@ -361,9 +361,9 @@ function GroundingPanel({
       {!allDone ? (
         <>
           <div className="text-center py-4">
-            <div className="text-4xl font-bold text-indigo-600 mb-2">{current.count}</div>
-            <p className="text-lg text-gray-900 font-medium">{current.prompt}</p>
-            <p className="text-sm text-gray-400 mt-1">感官：{current.sense}</p>
+            <div className="text-4xl font-bold text-teal mb-2">{current.count}</div>
+            <p className="text-lg text-ink font-medium">{current.prompt}</p>
+            <p className="text-sm text-ink-soft/70 mt-1">感官：{current.sense}</p>
           </div>
 
           <div className="flex flex-wrap justify-center gap-2">
@@ -373,8 +373,8 @@ function GroundingPanel({
                 onClick={() => toggle(i)}
                 className={`w-12 h-12 rounded-xl border-2 font-medium transition-all ${
                   ok
-                    ? "bg-emerald-50 border-emerald-400 text-emerald-700"
-                    : "bg-white border-gray-200 text-gray-400 hover:border-indigo-300"
+                    ? "bg-teal-soft border-teal-mid text-teal-deep"
+                    : "bg-white border-[var(--line)] text-ink-soft/70 hover:border-teal/40"
                 }`}
               >
                 {ok ? "✓" : i + 1}
@@ -401,9 +401,9 @@ function GroundingPanel({
         </>
       ) : (
         <div className="text-center py-8 space-y-4">
-          <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-          <p className="text-gray-900 font-medium">你已回到当下</p>
-          <p className="text-sm text-gray-500">慢慢感受双脚与地面的接触，继续一次深呼吸。</p>
+          <CheckCircle2 className="w-12 h-12 text-teal-mid mx-auto" />
+          <p className="text-ink font-medium">你已回到当下</p>
+          <p className="text-sm text-ink-soft">慢慢感受双脚与地面的接触，继续一次深呼吸。</p>
           <div className="flex gap-3 justify-center">
             <button onClick={finish} className="btn-primary">
               记录完成
@@ -453,8 +453,8 @@ function BodyScanPanel({
   return (
     <div className="card space-y-5">
       <div>
-        <h2 className="font-medium text-gray-900">引导式身体扫描</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="font-medium text-ink">引导式身体扫描</h2>
+        <p className="text-sm text-ink-soft mt-1">
           约 {BODY_SCAN_STEPS.length * 12} 秒，逐步觉察身体各部位的感受。
         </p>
       </div>
@@ -462,14 +462,14 @@ function BodyScanPanel({
       <div className="min-h-[140px] flex items-center justify-center text-center px-4">
         {done ? (
           <div>
-            <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-            <p className="text-gray-900 font-medium">身体扫描完成</p>
-            <p className="text-sm text-gray-500 mt-1">感谢你给自己这段安静的时间。</p>
+            <CheckCircle2 className="w-10 h-10 text-teal-mid mx-auto mb-3" />
+            <p className="text-ink font-medium">身体扫描完成</p>
+            <p className="text-sm text-ink-soft mt-1">感谢你给自己这段安静的时间。</p>
           </div>
         ) : (
           <p
             key={step}
-            className="text-lg text-gray-800 leading-relaxed animate-fade-in-up"
+            className="text-lg text-ink leading-relaxed animate-fade-in-up"
           >
             {running ? BODY_SCAN_STEPS[Math.min(step, BODY_SCAN_STEPS.length - 1)] : "找一个舒适的姿势，准备开始。"}
           </p>
@@ -477,9 +477,9 @@ function BodyScanPanel({
       </div>
 
       {running && !done && (
-        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+        <div className="w-full bg-mist/60 rounded-full h-2 overflow-hidden">
           <div
-            className="h-full bg-indigo-500 transition-all duration-500"
+            className="h-full bg-teal-soft0 transition-all duration-500"
             style={{ width: `${((step + 1) / BODY_SCAN_STEPS.length) * 100}%` }}
           />
         </div>
@@ -540,16 +540,16 @@ function CopingPanel({
     return (
       <div className="card space-y-5 animate-fade-in-up">
         <div>
-          <p className="text-xs text-indigo-600 font-medium mb-1">{selected.category}</p>
-          <h2 className="font-medium text-gray-900 text-lg">{selected.title}</h2>
-          <p className="text-sm text-gray-500 mt-1">{selected.summary}</p>
+          <p className="text-xs text-teal font-medium mb-1">{selected.category}</p>
+          <h2 className="font-medium text-ink text-lg">{selected.title}</h2>
+          <p className="text-sm text-ink-soft mt-1">{selected.summary}</p>
         </div>
 
-        <div className="bg-indigo-50 rounded-xl p-5">
-          <p className="text-xs text-indigo-500 mb-2">
+        <div className="bg-teal-soft rounded-xl p-5">
+          <p className="text-xs text-teal-mid mb-2">
             步骤 {step + 1} / {selected.steps.length}
           </p>
-          <p className="text-gray-800 leading-relaxed">{selected.steps[step]}</p>
+          <p className="text-ink leading-relaxed">{selected.steps[step]}</p>
         </div>
 
         <div className="flex gap-3">
@@ -580,10 +580,10 @@ function CopingPanel({
           <button
             key={c}
             onClick={() => setFilter(c)}
-            className={`px-3 py-1.5 rounded-full text-sm transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
               filter === c
-                ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
-                : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                ? "bg-teal-soft text-teal-deep border border-teal/40"
+                : "bg-white text-ink-soft border border-[var(--line)] hover:bg-white/45"
             }`}
           >
             {c}
@@ -600,11 +600,11 @@ function CopingPanel({
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <span className="text-xs text-indigo-600 font-medium">{tool.category}</span>
-                <h3 className="font-medium text-gray-900 mt-1">{tool.title}</h3>
-                <p className="text-sm text-gray-500 mt-1 leading-relaxed">{tool.summary}</p>
+                <span className="text-xs text-teal font-medium">{tool.category}</span>
+                <h3 className="font-medium text-ink mt-1">{tool.title}</h3>
+                <p className="text-sm text-ink-soft mt-1 leading-relaxed">{tool.summary}</p>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 mt-1 shrink-0" />
+              <ChevronRight className="w-4 h-4 text-ink-soft/40 group-hover:text-teal-mid mt-1 shrink-0" />
             </div>
           </button>
         ))}

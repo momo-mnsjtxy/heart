@@ -121,8 +121,8 @@ export default function JournalWriter() {
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">情绪日记</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">情绪日记</h1>
+          <p className="text-ink-soft text-sm mt-1">
             {privacySettings?.saveJournalData === false
               ? "已关闭日记保存，本次内容不会写入本地"
               : "私密书写空间，内容仅保存在你的设备上"}
@@ -137,7 +137,7 @@ export default function JournalWriter() {
       </div>
 
       {message && (
-        <div className="text-sm text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
+        <div className="text-sm text-teal-deep bg-teal-soft/80 border border-[var(--line)] rounded-xl px-4 py-3 animate-fade-in-up">
           {message}
         </div>
       )}
@@ -145,18 +145,18 @@ export default function JournalWriter() {
       {!editing && (
         <div className="card">
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-indigo-600" />
-            <h2 className="font-medium text-gray-900">写作提示</h2>
+            <Sparkles className="w-4 h-4 text-teal" />
+            <h2 className="font-medium text-ink">写作提示</h2>
           </div>
           <div className="grid sm:grid-cols-2 gap-2">
             {JOURNAL_PROMPTS.map((prompt) => (
               <button
                 key={prompt.id}
                 onClick={() => startNew(prompt)}
-                className="text-left p-3 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+                className="text-left p-3 rounded-xl border border-[var(--line)] hover:border-teal/40 hover:bg-teal-soft transition-all"
               >
-                <div className="text-sm font-medium text-gray-900">{prompt.title}</div>
-                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{prompt.text}</p>
+                <div className="text-sm font-medium text-ink">{prompt.title}</div>
+                <p className="text-xs text-ink-soft mt-1 line-clamp-2">{prompt.text}</p>
               </button>
             ))}
           </div>
@@ -173,7 +173,7 @@ export default function JournalWriter() {
           />
 
           <div>
-            <label className="text-sm text-gray-600 mb-2 block">此刻心情（可选）</label>
+            <label className="text-sm text-ink-soft mb-2 block">此刻心情（可选）</label>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map((m) => (
                 <button
@@ -181,8 +181,8 @@ export default function JournalWriter() {
                   onClick={() => setMood(mood === m ? undefined : m)}
                   className={`flex-1 py-2 rounded-xl text-center transition-all ${
                     mood === m
-                      ? "bg-indigo-50 border-2 border-indigo-400"
-                      : "bg-gray-50 border-2 border-transparent hover:bg-gray-100"
+                      ? "bg-teal-soft border-2 border-teal"
+                      : "bg-white/45 border-2 border-transparent hover:bg-mist/60"
                   }`}
                   title={MOOD_LABELS[m - 1]}
                 >
@@ -224,27 +224,27 @@ export default function JournalWriter() {
         {entries.map((entry) => (
           <div key={entry.id} className="card animate-fade-in-up">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-teal-soft flex items-center justify-center shrink-0">
                 {entry.mood ? (
                   <span className="text-xl">{MOOD_EMOJIS[entry.mood - 1]}</span>
                 ) : (
-                  <BookOpen className="w-5 h-5 text-indigo-600" />
+                  <BookOpen className="w-5 h-5 text-teal" />
                 )}
               </div>
               <button className="flex-1 text-left min-w-0" onClick={() => startEdit(entry)}>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-medium text-gray-900">{entry.title}</h3>
-                  <span className="text-xs text-gray-400">
+                  <h3 className="font-medium text-ink">{entry.title}</h3>
+                  <span className="text-xs text-ink-soft/70">
                     {formatDateTime(entry.updatedAt)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mt-1 line-clamp-3 whitespace-pre-wrap">
+                <p className="text-sm text-ink-soft mt-1 line-clamp-3 whitespace-pre-wrap">
                   {entry.content}
                 </p>
               </button>
               <button
                 onClick={() => handleDelete(entry.id)}
-                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                className="text-ink-soft/70 hover:text-red-500 transition-colors p-1"
                 aria-label="删除日记"
               >
                 <Trash2 className="w-4 h-4" />
@@ -255,9 +255,9 @@ export default function JournalWriter() {
 
         {entries.length === 0 && !editing && (
           <div className="card text-center py-12">
-            <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-400">还没有日记</p>
-            <p className="text-sm text-gray-400 mt-1">选择一个提示，或自由书写开始吧</p>
+            <BookOpen className="w-10 h-10 text-ink-soft/40 mx-auto mb-3" />
+            <p className="text-ink-soft/70">还没有日记</p>
+            <p className="text-sm text-ink-soft/70 mt-1">选择一个提示，或自由书写开始吧</p>
           </div>
         )}
       </div>
