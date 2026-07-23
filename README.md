@@ -22,12 +22,14 @@
 
 ## 技术栈
 
-- **框架**: Next.js 14 (App Router)
+- **框架**: Next.js 15 (App Router) + React 19
 - **语言**: TypeScript
 - **样式**: Tailwind CSS
 - **存储**: IndexedDB (idb)
-- **加密**: Web Crypto API (AES-256-GCM + PBKDF2)
+- **加密**: Web Crypto API (AES-256-GCM + PBKDF2 包裹密钥)
 - **AI**: OpenAI API (可选，支持回退模式)
+
+> 本项目不使用 `next/image`。`sharp` 被本地 MIT stub 覆盖，以避免引入有漏洞的 libvips / LGPL 二进制依赖。
 
 ## 快速开始
 

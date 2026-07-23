@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // No next/image usage; avoid requiring sharp for image optimization.
+  images: {
+    unoptimized: true,
+  },
   async headers() {
     return [
       {
