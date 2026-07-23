@@ -22,9 +22,30 @@ export interface MoodEntry {
   timestamp: number;
 }
 
+export interface JournalEntry {
+  id: string;
+  title: string;
+  content: string;
+  promptId?: string;
+  mood?: number;
+  tags: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PracticeLog {
+  id: string;
+  type: "breathing" | "grounding" | "body-scan" | "cbt";
+  label: string;
+  durationSec: number;
+  completedAt: number;
+  note?: string;
+}
+
 export interface PrivacySettings {
   saveConversations: boolean;
   saveMoodData: boolean;
+  saveJournalData: boolean;
   encryptionEnabled: boolean;
   ephemeralMode: boolean;
 }

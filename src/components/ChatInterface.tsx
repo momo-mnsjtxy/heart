@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Shield, Trash2, Plus, MessageCircle } from "lucide-react";
+import Link from "next/link";
+import { Send, Shield, Trash2, Plus, MessageCircle, Wind, BookOpen } from "lucide-react";
 import type { Message, ChatSession, PrivacySettings } from "@/types";
 import { saveSession, getAllSessions, deleteSession, getPrivacySettings } from "@/lib/storage";
 
@@ -285,6 +286,22 @@ export default function ChatInterface() {
                     {prompt}
                   </button>
                 ))}
+              </div>
+              <div className="flex flex-wrap justify-center gap-3 mt-6">
+                <Link
+                  href="/practice"
+                  className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-2 rounded-xl"
+                >
+                  <Wind className="w-4 h-4" />
+                  先做个呼吸练习
+                </Link>
+                <Link
+                  href="/journal"
+                  className="inline-flex items-center gap-2 text-sm text-amber-700 hover:text-amber-800 bg-amber-50 px-3 py-2 rounded-xl"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  写一篇情绪日记
+                </Link>
               </div>
             </div>
           ) : (

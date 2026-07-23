@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Heart, Shield, Home } from "lucide-react";
+import { MessageCircle, Heart, Shield, Home, Wind, BookOpen } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "首页", icon: Home },
   { href: "/chat", label: "咨询", icon: MessageCircle },
   { href: "/mood", label: "情绪", icon: Heart },
+  { href: "/practice", label: "练习", icon: Wind },
+  { href: "/journal", label: "日记", icon: BookOpen },
   { href: "/privacy", label: "隐私", icon: Shield },
 ];
 
@@ -59,7 +61,7 @@ export default function Navigation() {
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 z-40">
-        <div className="flex justify-around py-2">
+        <div className="flex justify-around py-1.5 px-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -67,12 +69,12 @@ export default function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${
+                className={`flex flex-col items-center gap-0.5 px-1.5 py-1.5 rounded-lg transition-all min-w-0 ${
                   isActive ? "text-indigo-600" : "text-gray-500"
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-xs">{item.label}</span>
+                <span className="text-[10px] truncate">{item.label}</span>
               </Link>
             );
           })}
