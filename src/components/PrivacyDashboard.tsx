@@ -14,7 +14,13 @@ import {
 
 export default function PrivacyDashboard() {
   const [settings, setSettings] = useState<PrivacySettings | null>(null);
-  const [stats, setStats] = useState({ sessions: 0, moods: 0, encrypted: false });
+  const [stats, setStats] = useState({
+    sessions: 0,
+    moods: 0,
+    journals: 0,
+    practices: 0,
+    encrypted: false,
+  });
   const [passphrase, setPassphrase] = useState("");
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
   const [unlockPassphrase, setUnlockPassphrase] = useState("");
@@ -157,7 +163,7 @@ export default function PrivacyDashboard() {
 
       <div className="card">
         <h2 className="font-medium text-gray-900 mb-4">本地数据统计</h2>
-        <div className="grid grid-cols-3 gap-4 text-center">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div>
             <div className="text-2xl font-bold text-indigo-600">{stats.sessions}</div>
             <div className="text-xs text-gray-500">对话记录</div>
@@ -167,11 +173,19 @@ export default function PrivacyDashboard() {
             <div className="text-xs text-gray-500">情绪记录</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-purple-600">
-              {stats.encrypted ? (unlocked ? "已解锁" : "已加密") : "未加密"}
-            </div>
-            <div className="text-xs text-gray-500">加密状态</div>
+            <div className="text-2xl font-bold text-sky-600">{stats.journals}</div>
+            <div className="text-xs text-gray-500">日记</div>
           </div>
+          <div>
+            <div className="text-2xl font-bold text-violet-600">{stats.practices}</div>
+            <div className="text-xs text-gray-500">练习</div>
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+          <div className="text-sm font-medium text-purple-600">
+            {stats.encrypted ? (unlocked ? "已解锁" : "已加密") : "未加密"}
+          </div>
+          <div className="text-xs text-gray-500">加密状态</div>
         </div>
       </div>
 
@@ -181,6 +195,7 @@ export default function PrivacyDashboard() {
         {([
           { key: "saveConversations" as const, label: "保存对话记录", desc: "在本地存储咨询对话" },
           { key: "saveMoodData" as const, label: "保存情绪数据", desc: "在本地存储情绪记录" },
+          { key: "saveJournalData" as const, label: "保存日记内容", desc: "在本地存储情绪日记" },
           { key: "ephemeralMode" as const, label: "默认无痕模式", desc: "新对话默认不保存" },
         ]).map((item) => (
           <label key={item.key} className="flex items-center justify-between cursor-pointer">
@@ -293,7 +308,7 @@ export default function PrivacyDashboard() {
               <h2 className="text-lg font-bold">确认删除</h2>
             </div>
             <p className="text-gray-600 text-sm mb-6">
-              此操作将永久删除所有本地存储的对话记录、情绪数据和设置。此操作不可撤销。
+              此操作将永久删除所有本地存储的对话、情绪、日记、练习记录和设置。此操作不可撤销。
             </p>
             <div className="flex gap-3">
               <button onClick={handleDeleteAll} className="btn-danger flex-1">确认删除</button>

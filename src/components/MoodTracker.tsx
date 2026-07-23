@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { Plus, Trash2, TrendingUp, Sparkles } from "lucide-react";
 import type { MoodEntry, PrivacySettings } from "@/types";
 import { MOOD_LABELS, MOOD_EMOJIS, MOOD_COLORS, MOOD_TAGS } from "@/lib/counselor";
+import { generateId, formatDateTime } from "@/lib/id";
 import { saveMoodEntry, getAllMoodEntries, deleteMoodEntry, getPrivacySettings } from "@/lib/storage";
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
 
 export default function MoodTracker() {
   const [entries, setEntries] = useState<MoodEntry[]>([]);
@@ -70,6 +68,28 @@ export default function MoodTracker() {
     ? (entries.reduce((sum, e) => sum + e.mood, 0) / entries.length).toFixed(1)
     : null;
 
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const weekEntries = entries.filter((e) => e.timestamp >= weekAgo);
+  const weekAvg =
+    weekEntries.length > 0
+      ? weekEntries.reduce((sum, e) => sum + e.mood, 0) / weekEntries.length
+      : null;
+  const tagCounts = weekEntries.reduce<Record<string, number>>((acc, e) => {
+    e.tags.forEach((t) => {
+      acc[t] = (acc[t] || 0) + 1;
+    });
+    return acc;
+  }, {});
+  const topTag = Object.entries(tagCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const weekInsight =
+    weekEntries.length === 0
+      ? null
+      : weekAvg !== null && weekAvg >= 4
+        ? `近 7 天平均情绪偏积极（${weekAvg.toFixed(1)}），继续保持对自己的关照。`
+        : weekAvg !== null && weekAvg <= 2.5
+          ? `近 7 天情绪偏低（${weekAvg.toFixed(1)}）${topTag ? `，常出现「${topTag}」` : ""}。可以试试正念练习或写一篇日记。`
+          : `近 7 天记录了 ${weekEntries.length} 次情绪${topTag ? `，最常提到「${topTag}」` : ""}。觉察本身就是很好的开始。`;
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -97,6 +117,28 @@ export default function MoodTracker() {
           <div className="card text-center">
             <div className="text-3xl font-bold text-green-600">{avgMood}</div>
             <div className="text-sm text-gray-500 mt-1">平均情绪</div>
+          </div>
+        </div>
+      )}
+
+      {weekInsight && (
+        <div className="card bg-gradient-to-br from-indigo-50 to-sky-50 border-indigo-100">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-medium text-gray-900 text-sm">本周洞察</h2>
+              <p className="text-sm text-gray-600 mt-1 leading-relaxed">{weekInsight}</p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Link href="/practice" className="text-xs text-indigo-600 hover:underline">
+                  去做正念练习 →
+                </Link>
+                <Link href="/journal" className="text-xs text-indigo-600 hover:underline">
+                  写情绪日记 →
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -191,7 +233,7 @@ export default function MoodTracker() {
               <div className="flex items-center gap-2">
                 <span className="font-medium text-gray-900">{MOOD_LABELS[entry.mood - 1]}</span>
                 <span className="text-xs text-gray-400">
-                  {new Date(entry.timestamp).toLocaleString("zh-CN")}
+                  {formatDateTime(entry.timestamp)}
                 </span>
               </div>
               {entry.note && <p className="text-sm text-gray-600 mt-1">{entry.note}</p>}

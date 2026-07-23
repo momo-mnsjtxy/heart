@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle, Heart, Shield, Lock, Sparkles, ArrowRight } from "lucide-react";
+import { MessageCircle, Heart, Shield, Lock, Sparkles, ArrowRight, Wind, BookOpen } from "lucide-react";
 
 const features = [
   {
@@ -15,6 +15,20 @@ const features = [
     description: "记录每日情绪变化，发现情绪模式，更好地了解自己。",
     href: "/mood",
     color: "from-pink-500 to-rose-600",
+  },
+  {
+    icon: Wind,
+    title: "正念练习",
+    description: "呼吸训练、五感接地、身体扫描与应对技巧，帮助你回到当下。",
+    href: "/practice",
+    color: "from-sky-500 to-cyan-600",
+  },
+  {
+    icon: BookOpen,
+    title: "情绪日记",
+    description: "在私密空间书写感受，配合写作提示，整理思绪与自我对话。",
+    href: "/journal",
+    color: "from-amber-500 to-orange-600",
   },
   {
     icon: Shield,
@@ -65,9 +79,9 @@ export default function HomePage() {
               <Sparkles className="w-5 h-5" />
               开始咨询
             </Link>
-            <Link href="/privacy" className="btn-secondary flex items-center justify-center gap-2 text-base">
-              <Shield className="w-5 h-5" />
-              了解隐私保护
+            <Link href="/practice" className="btn-secondary flex items-center justify-center gap-2 text-base">
+              <Wind className="w-5 h-5" />
+              试试正念练习
             </Link>
           </div>
         </div>
@@ -75,7 +89,7 @@ export default function HomePage() {
 
       {/* Features */}
       <section className="max-w-5xl mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature) => {
             const Icon = feature.icon;
             return (
