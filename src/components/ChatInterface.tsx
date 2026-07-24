@@ -24,9 +24,9 @@ export default function ChatInterface() {
   const [ephemeral, setEphemeral] = useState(false);
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
-  const [usingFallback, setUsingFallback] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [encryptionLocked, setEncryptionLocked] = useState(false);
+  const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -144,42 +144,148 @@ export default function ChatInterface() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: updatedMessages.map((m) => ({ role: m.role, content: m.content })),
+          stream: true,
         }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type") || "";
 
-      if (!response.ok) {
-        throw new Error(data.error || "请求失败");
+      // Crisis / config / error responses are JSON (including some non-OK statuses with helpful copy)
+      if (contentType.includes("application/json")) {
+        const data = await response.json();
+
+        if (data.crisis) {
+          openCrisisResources();
+          setAiConfigured(true);
+        } else if (data.configured === false || response.status === 503) {
+          setAiConfigured(false);
+          setStatusMessage("尚未配置 AI 模型密钥，请在 .env.local 中设置 OPENAI_API_KEY");
+        } else if (!response.ok) {
+          setStatusMessage(data.error || "AI 服务暂时不可用");
+        } else {
+          setAiConfigured(true);
+        }
+
+        const assistantMessage: Message = {
+          id: generateId(),
+          role: "assistant",
+          content:
+            data.message?.content ||
+            data.error ||
+            "抱歉，我暂时无法回应。请稍后再试。",
+          timestamp: Date.now(),
+        };
+
+        const finalSession = {
+          ...updatedSession,
+          messages: [...updatedMessages, assistantMessage],
+          updatedAt: Date.now(),
+        };
+        setCurrentSession(finalSession);
+
+        const shouldSaveConversations = privacySettings?.saveConversations !== false;
+        const shouldPersistSession = shouldSaveConversations && !ephemeral;
+        if (shouldPersistSession && response.ok) {
+          try {
+            await saveSession(finalSession);
+            await loadSessions();
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : "保存失败";
+            setStatusMessage(msg.includes("解锁") ? msg : "对话保存失败，请检查隐私中心加密状态");
+          }
+        }
+        return;
       }
 
-      if (data.crisis) {
-        openCrisisResources();
-      }
-      if (data.fallback) {
-        setUsingFallback(true);
-      } else {
-        setUsingFallback(false);
+      if (!response.ok || !response.body) {
+        throw new Error("AI 服务暂时不可用");
       }
 
-      const assistantMessage: Message = {
-        id: generateId(),
-        role: "assistant",
-        content: data.message?.content || "抱歉，我暂时无法回应。请稍后再试。",
-        timestamp: Date.now(),
-      };
+      // Real model: stream tokens into the bubble
+      setAiConfigured(true);
+      const assistantId = generateId();
+      let assistantContent = "";
 
-      const finalSession = {
+      setCurrentSession({
         ...updatedSession,
-        messages: [...updatedMessages, assistantMessage],
+        messages: [
+          ...updatedMessages,
+          { id: assistantId, role: "assistant", content: "", timestamp: Date.now() },
+        ],
+        updatedAt: Date.now(),
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n");
+        buffer = parts.pop() || "";
+
+        for (const line of parts) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const payload = trimmed.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(payload) as { content?: string; error?: string };
+            if (parsed.error) {
+              throw new Error(parsed.error);
+            }
+            if (parsed.content) {
+              assistantContent += parsed.content;
+              setCurrentSession((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  messages: prev.messages.map((m) =>
+                    m.id === assistantId ? { ...m, content: assistantContent } : m
+                  ),
+                  updatedAt: Date.now(),
+                };
+              });
+            }
+          } catch (err) {
+            if (err instanceof SyntaxError) continue;
+            throw err;
+          }
+        }
+      }
+
+      if (!assistantContent.trim()) {
+        assistantContent = "抱歉，模型没有返回内容。请稍后再试。";
+        setCurrentSession((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: prev.messages.map((m) =>
+              m.id === assistantId ? { ...m, content: assistantContent } : m
+            ),
+          };
+        });
+      }
+
+      const finalSession: ChatSession = {
+        ...updatedSession,
+        messages: [
+          ...updatedMessages,
+          {
+            id: assistantId,
+            role: "assistant",
+            content: assistantContent,
+            timestamp: Date.now(),
+          },
+        ],
         updatedAt: Date.now(),
       };
-
       setCurrentSession(finalSession);
 
       const shouldSaveConversations = privacySettings?.saveConversations !== false;
       const shouldPersistSession = shouldSaveConversations && !ephemeral;
-
       if (shouldPersistSession) {
         try {
           await saveSession(finalSession);
@@ -193,7 +299,7 @@ export default function ChatInterface() {
       const errorMessage: Message = {
         id: generateId(),
         role: "assistant",
-        content: "连接出现问题，请检查网络后重试。你的消息已保留。",
+        content: "连接出现问题，请检查网络或 AI 接口配置后重试。你的消息已保留。",
         timestamp: Date.now(),
       };
       setCurrentSession({
@@ -330,7 +436,7 @@ export default function ChatInterface() {
           </div>
         </div>
 
-        {(encryptionLocked || statusMessage || usingFallback) && (
+        {(encryptionLocked || statusMessage || aiConfigured === false) && (
           <div className="px-4 pt-3 space-y-2">
             <EncryptionGate onUnlocked={handleUnlocked} />
             {statusMessage && (
@@ -338,9 +444,9 @@ export default function ChatInterface() {
                 {statusMessage}
               </p>
             )}
-            {usingFallback && !statusMessage && (
+            {aiConfigured === false && !statusMessage && (
               <p className="text-xs text-ink-soft bg-sand/50 border border-[var(--line)] rounded-xl px-3 py-2">
-                当前为本地回退回复（未连接云端模型），功能仍可正常使用
+                尚未配置 AI 模型：请在 `.env.local` 设置 `OPENAI_API_KEY` 后重启服务
               </p>
             )}
           </div>
@@ -414,7 +520,7 @@ export default function ChatInterface() {
             ))
           )}
 
-          {isLoading && (
+          {isLoading && currentSession?.messages.at(-1)?.role !== "assistant" && (
             <div className="flex justify-start" aria-live="polite" aria-label="正在回复">
               <div className="chat-bubble-assistant flex items-center gap-1 py-4">
                 <div className="typing-dot w-2 h-2 bg-teal-mid rounded-full" />

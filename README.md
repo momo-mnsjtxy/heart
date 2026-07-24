@@ -4,13 +4,13 @@
 
 ## 核心特性
 
-- **AI 情感支持** — 温暖、专业的 AI 咨询助手，提供情绪引导和心理支持
+- **AI 情感支持** — 通过 OpenAI 兼容接口调用真实大模型（支持流式回复）；未配置密钥时会明确提示，不会用模板冒充咨询
 - **情绪追踪** — 本地情绪记录与趋势可视化
 - **正念练习** — 盒式/4-7-8 呼吸、五感接地、身体扫描与 CBT 应对技巧
 - **情绪日记** — 写作提示引导的私密日记，可选关联心情
 - **隐私至上** — 数据加密存储在本地，无需注册，零追踪
 - **备份恢复** — 导出 JSON 备份，并支持合并/替换导入
-- **危机干预** — 内置危机检测与专业求助资源（检测后自动展示）
+- **危机干预** — 内置危机关键词检测与专业求助资源（安全场景下的固定指引）
 - **无痕模式** — 支持不保存对话的临时咨询
 
 ## 隐私架构
@@ -31,7 +31,7 @@
 - **样式**: Tailwind CSS
 - **存储**: IndexedDB (idb)
 - **加密**: Web Crypto API (AES-256-GCM + PBKDF2 包裹密钥)
-- **AI**: OpenAI API (可选，支持回退模式)
+- **AI**: OpenAI 兼容 Chat Completions API（需配置密钥；支持流式输出）
 
 > 本项目不使用 `next/image`。`sharp` 被本地 MIT stub 覆盖，以避免引入有漏洞的 libvips / LGPL 二进制依赖。
 
@@ -40,6 +40,10 @@
 ```bash
 # 安装依赖
 npm install
+
+# 配置 AI（必需，否则咨询页无法生成模型回复）
+cp .env.example .env.local
+# 编辑 .env.local，填入 OPENAI_API_KEY
 
 # 开发模式
 npm run dev
@@ -53,7 +57,7 @@ npm start
 
 ## 环境变量
 
-创建 `.env.local` 文件（可选）：
+创建 `.env.local` 文件：
 
 ```env
 OPENAI_API_KEY=your-api-key
@@ -61,7 +65,10 @@ OPENAI_API_BASE=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4o-mini
 ```
 
-未配置 API Key 时，平台将使用内置的回退响应系统，仍可正常使用。
+`OPENAI_API_KEY` 未配置时，咨询接口会返回明确的配置提示，**不会**用关键词模板假装在做心理咨询。  
+`OPENAI_API_BASE` 可指向任何兼容 OpenAI Chat Completions 协议的服务。
+
+危机关键词检测仍会返回固定的求助热线文案——这是安全兜底，不是日常对话回复。
 
 ## 项目结构
 
