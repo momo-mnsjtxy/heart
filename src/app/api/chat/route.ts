@@ -6,12 +6,38 @@ interface ChatMessage {
   content: string;
 }
 
+const MAX_MESSAGES = 40;
+const MAX_CONTENT_LENGTH = 4000;
+
 export async function POST(request: NextRequest) {
   try {
-    const { messages } = await request.json() as { messages: ChatMessage[] };
+    const body = await request.json();
+    const messages = (body as { messages?: ChatMessage[] }).messages;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "消息不能为空" }, { status: 400 });
+    }
+
+    if (messages.length > MAX_MESSAGES) {
+      return NextResponse.json(
+        { error: `消息条数过多（最多 ${MAX_MESSAGES} 条）` },
+        { status: 400 }
+      );
+    }
+
+    for (const message of messages) {
+      if (!message || (message.role !== "user" && message.role !== "assistant")) {
+        return NextResponse.json({ error: "消息格式无效" }, { status: 400 });
+      }
+      if (typeof message.content !== "string" || !message.content.trim()) {
+        return NextResponse.json({ error: "消息内容无效" }, { status: 400 });
+      }
+      if (message.content.length > MAX_CONTENT_LENGTH) {
+        return NextResponse.json(
+          { error: `单条消息过长（最多 ${MAX_CONTENT_LENGTH} 字）` },
+          { status: 400 }
+        );
+      }
     }
 
     const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");

@@ -5,7 +5,16 @@ import Link from "next/link";
 import { Send, Shield, Trash2, Plus, MessageCircle, Wind, BookOpen } from "lucide-react";
 import type { Message, ChatSession, PrivacySettings } from "@/types";
 import { generateId } from "@/lib/id";
-import { saveSession, getAllSessions, deleteSession, getPrivacySettings } from "@/lib/storage";
+import { detectCrisis } from "@/lib/counselor";
+import {
+  saveSession,
+  getAllSessions,
+  deleteSession,
+  getPrivacySettings,
+  getEncryptionStatus,
+} from "@/lib/storage";
+import { openCrisisResources } from "@/components/CrisisBanner";
+import EncryptionGate from "@/components/EncryptionGate";
 
 export default function ChatInterface() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -15,6 +24,9 @@ export default function ChatInterface() {
   const [ephemeral, setEphemeral] = useState(false);
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [encryptionLocked, setEncryptionLocked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -22,11 +34,33 @@ export default function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  const refreshEncryption = useCallback(async () => {
+    const status = await getEncryptionStatus();
+    setEncryptionLocked(status === "locked");
+    return status;
+  }, []);
+
+  const loadSessions = useCallback(async () => {
+    const status = await refreshEncryption();
+    if (status === "locked") {
+      setSessions([]);
+      return;
+    }
+    const all = await getAllSessions();
+    setSessions(all);
+  }, [refreshEncryption]);
+
   useEffect(() => {
     async function init() {
       const settings = await getPrivacySettings();
       setPrivacySettings(settings);
       setEphemeral(settings.ephemeralMode);
+      const status = await refreshEncryption();
+      if (status === "locked") {
+        setSessions([]);
+        setStatusMessage("本地对话已加密，请先解锁后查看历史");
+        return;
+      }
       const all = await getAllSessions();
       setSessions(all);
       if (all.length > 0) {
@@ -34,15 +68,16 @@ export default function ChatInterface() {
       }
     }
     init();
-  }, []);
+  }, [refreshEncryption]);
 
   useEffect(() => {
     scrollToBottom();
   }, [currentSession?.messages, scrollToBottom]);
 
-  async function loadSessions() {
+  async function handleUnlocked() {
+    setStatusMessage("");
+    await loadSessions();
     const all = await getAllSessions();
-    setSessions(all);
     if (all.length > 0 && !currentSession) {
       setCurrentSession(all[0]);
     }
@@ -65,11 +100,16 @@ export default function ChatInterface() {
   async function handleSend() {
     if (!input.trim() || isLoading) return;
 
+    const text = input.trim();
+    if (detectCrisis(text)) {
+      openCrisisResources();
+    }
+
     let session = currentSession;
     if (!session) {
       session = {
         id: generateId(),
-        title: input.trim().slice(0, 30),
+        title: text.slice(0, 30),
         messages: [],
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -81,14 +121,14 @@ export default function ChatInterface() {
     const userMessage: Message = {
       id: generateId(),
       role: "user",
-      content: input.trim(),
+      content: text,
       timestamp: Date.now(),
     };
 
     const updatedMessages = [...session.messages, userMessage];
     const updatedSession = {
       ...session,
-      title: session.messages.length === 0 ? input.trim().slice(0, 30) : session.title,
+      title: session.messages.length === 0 ? text.slice(0, 30) : session.title,
       messages: updatedMessages,
       updatedAt: Date.now(),
     };
@@ -96,6 +136,7 @@ export default function ChatInterface() {
     setCurrentSession(updatedSession);
     setInput("");
     setIsLoading(true);
+    setStatusMessage("");
 
     try {
       const response = await fetch("/api/chat", {
@@ -107,6 +148,20 @@ export default function ChatInterface() {
       });
 
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "请求失败");
+      }
+
+      if (data.crisis) {
+        openCrisisResources();
+      }
+      if (data.fallback) {
+        setUsingFallback(true);
+      } else {
+        setUsingFallback(false);
+      }
+
       const assistantMessage: Message = {
         id: generateId(),
         role: "assistant",
@@ -122,13 +177,17 @@ export default function ChatInterface() {
 
       setCurrentSession(finalSession);
 
-      // Persist only when global "保存对话记录" is on and session is not ephemeral
       const shouldSaveConversations = privacySettings?.saveConversations !== false;
       const shouldPersistSession = shouldSaveConversations && !ephemeral;
 
       if (shouldPersistSession) {
-        await saveSession(finalSession);
-        await loadSessions();
+        try {
+          await saveSession(finalSession);
+          await loadSessions();
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "保存失败";
+          setStatusMessage(msg.includes("解锁") ? msg : "对话保存失败，请检查隐私中心加密状态");
+        }
       }
     } catch {
       const errorMessage: Message = {
@@ -155,57 +214,73 @@ export default function ChatInterface() {
   }
 
   async function handleDeleteSession(id: string) {
-    await deleteSession(id);
-    if (currentSession?.id === id) {
-      setCurrentSession(null);
+    try {
+      await deleteSession(id);
+      if (currentSession?.id === id) {
+        setCurrentSession(null);
+      }
+      await loadSessions();
+    } catch {
+      setStatusMessage("删除失败：如已启用加密，请先解锁");
     }
-    await loadSessions();
   }
 
   return (
-    <div className="flex h-[calc(100vh-0px)] md:h-screen">
-      {/* Session sidebar */}
+    <div className="flex h-[calc(100dvh-6rem)] md:h-screen">
       <div
         className={`${
           showSidebar ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 fixed md:relative z-30 w-72 h-full bg-white/70 backdrop-blur-md border-r border-[var(--line)] transition-transform duration-300 flex flex-col`}
       >
         <div className="p-4 border-b border-[var(--line)]">
-          <button onClick={createNewSession} className="btn-primary w-full flex items-center justify-center gap-2 text-sm">
+          <button
+            type="button"
+            onClick={createNewSession}
+            className="btn-primary w-full flex items-center justify-center gap-2 text-sm"
+          >
             <Plus className="w-4 h-4" />
             新对话
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className={`group flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all ${
-                currentSession?.id === session.id
-                  ? "bg-teal-soft text-teal-deep"
-                  : "hover:bg-white/45 text-ink-soft"
-              }`}
-            >
-              <button
-                className="flex-1 text-left text-sm truncate"
-                onClick={() => {
-                  setCurrentSession(session);
-                  setShowSidebar(false);
-                }}
+          {encryptionLocked && (
+            <p className="text-center text-ink-soft/70 text-sm py-6 px-2">
+              历史对话已加密，解锁后显示
+            </p>
+          )}
+          {!encryptionLocked &&
+            sessions.map((session) => (
+              <div
+                key={session.id}
+                className={`group flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all ${
+                  currentSession?.id === session.id
+                    ? "bg-teal-soft text-teal-deep"
+                    : "hover:bg-white/45 text-ink-soft"
+                }`}
               >
-                <MessageCircle className="w-4 h-4 inline mr-2 opacity-50" />
-                {session.title}
-              </button>
-              <button
-                onClick={() => handleDeleteSession(session.id)}
-                className="opacity-0 group-hover:opacity-100 text-ink-soft/70 hover:text-red-500 transition-all p-1"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
-          {sessions.length === 0 && (
+                <button
+                  type="button"
+                  className="flex-1 text-left text-sm truncate"
+                  onClick={() => {
+                    setCurrentSession(session);
+                    setShowSidebar(false);
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4 inline mr-2 opacity-50" aria-hidden="true" />
+                  {session.title}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSession(session.id)}
+                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-ink-soft/70 hover:text-red-500 transition-all p-1"
+                  aria-label={`删除对话：${session.title}`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          {!encryptionLocked && sessions.length === 0 && (
             <p className="text-center text-ink-soft/70 text-sm py-8">暂无历史对话</p>
           )}
         </div>
@@ -218,33 +293,34 @@ export default function ChatInterface() {
               onChange={(e) => setEphemeral(e.target.checked)}
               className="rounded border-[var(--line)] text-teal focus:ring-teal/40"
             />
-            <Shield className="w-4 h-4" />
+            <Shield className="w-4 h-4" aria-hidden="true" />
             无痕模式
           </label>
           <p className="text-xs text-ink-soft/70 mt-1">开启后对话不会保存</p>
         </div>
       </div>
 
-      {/* Overlay for mobile sidebar */}
       {showSidebar && (
-        <div className="md:hidden fixed inset-0 bg-black/20 z-20" onClick={() => setShowSidebar(false)} />
+        <div
+          className="md:hidden fixed inset-0 bg-black/20 z-20"
+          onClick={() => setShowSidebar(false)}
+          aria-hidden="true"
+        />
       )}
 
-      {/* Chat area */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
+      <div className="flex-1 flex flex-col min-w-0">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)] bg-white/45 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={() => setShowSidebar(true)}
               className="md:hidden text-ink-soft hover:text-ink"
+              aria-label="打开对话列表"
             >
               <MessageCircle className="w-5 h-5" />
             </button>
             <div>
-              <h2 className="font-medium text-ink">
-                {currentSession?.title || "心语咨询"}
-              </h2>
+              <h2 className="font-medium text-ink">{currentSession?.title || "心语咨询"}</h2>
               <p className="text-xs text-ink-soft">
                 {ephemeral || privacySettings?.saveConversations === false
                   ? "对话不会保存到本地"
@@ -254,7 +330,22 @@ export default function ChatInterface() {
           </div>
         </div>
 
-        {/* Messages */}
+        {(encryptionLocked || statusMessage || usingFallback) && (
+          <div className="px-4 pt-3 space-y-2">
+            <EncryptionGate onUnlocked={handleUnlocked} />
+            {statusMessage && (
+              <p className="text-xs text-teal-deep bg-teal-soft/80 border border-[var(--line)] rounded-xl px-3 py-2">
+                {statusMessage}
+              </p>
+            )}
+            {usingFallback && !statusMessage && (
+              <p className="text-xs text-ink-soft bg-sand/50 border border-[var(--line)] rounded-xl px-3 py-2">
+                当前为本地回退回复（未连接云端模型），功能仍可正常使用
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
           {!currentSession || currentSession.messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-4 animate-fade-in-up">
@@ -272,6 +363,7 @@ export default function ChatInterface() {
                 ].map((prompt) => (
                   <button
                     key={prompt}
+                    type="button"
                     onClick={() => {
                       setInput(prompt);
                       inputRef.current?.focus();
@@ -307,8 +399,15 @@ export default function ChatInterface() {
               >
                 <div className={message.role === "user" ? "chat-bubble-user" : "chat-bubble-assistant"}>
                   <div className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</div>
-                  <div className={`text-xs mt-1 ${message.role === "user" ? "text-teal-soft" : "text-ink-soft/70"}`}>
-                    {new Date(message.timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
+                  <div
+                    className={`text-xs mt-1 ${
+                      message.role === "user" ? "text-teal-soft" : "text-ink-soft/70"
+                    }`}
+                  >
+                    {new Date(message.timestamp).toLocaleTimeString("zh-CN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
                 </div>
               </div>
@@ -316,7 +415,7 @@ export default function ChatInterface() {
           )}
 
           {isLoading && (
-            <div className="flex justify-start">
+            <div className="flex justify-start" aria-live="polite" aria-label="正在回复">
               <div className="chat-bubble-assistant flex items-center gap-1 py-4">
                 <div className="typing-dot w-2 h-2 bg-teal-mid rounded-full" />
                 <div className="typing-dot w-2 h-2 bg-teal-mid rounded-full" />
@@ -327,7 +426,6 @@ export default function ChatInterface() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
         <div className="p-4 border-t border-[var(--line)] bg-white/45 backdrop-blur-sm">
           <div className="flex items-end gap-3 max-w-3xl mx-auto">
             <textarea
@@ -339,11 +437,14 @@ export default function ChatInterface() {
               rows={1}
               className="input-field resize-none flex-1 max-h-32"
               disabled={isLoading}
+              aria-label="消息输入"
             />
             <button
+              type="button"
               onClick={handleSend}
               disabled={!input.trim() || isLoading}
               className="btn-primary p-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="发送消息"
             >
               <Send className="w-5 h-5" />
             </button>

@@ -254,6 +254,36 @@
 .hero-ripples span:nth-child(2) { animation-delay: 1.8s; }
 .hero-ripples span:nth-child(3) { animation-delay: 3.6s; }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .atmosphere::before,
+  .atmosphere::after,
+  .typing-dot,
+  .animate-fade-in-up,
+  .animate-rise,
+  .animate-rise-delay-1,
+  .animate-rise-delay-2,
+  .animate-rise-delay-3,
+  .hero-ripples span {
+    animation: none !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }
