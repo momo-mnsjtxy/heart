@@ -11,7 +11,9 @@ import {
   getAllJournalEntries,
   deleteJournalEntry,
   getPrivacySettings,
+  getEncryptionStatus,
 } from "@/lib/storage";
+import EncryptionGate from "@/components/EncryptionGate";
 
 export default function JournalWriter() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -29,6 +31,13 @@ export default function JournalWriter() {
   }, []);
 
   async function load() {
+    const status = await getEncryptionStatus();
+    if (status === "locked") {
+      setEntries([]);
+      setPrivacySettings(await getPrivacySettings());
+      setMessage("日记已加密，请先解锁后查看");
+      return;
+    }
     try {
       const [all, settings] = await Promise.all([
         getAllJournalEntries(),
@@ -36,6 +45,7 @@ export default function JournalWriter() {
       ]);
       setEntries(all);
       setPrivacySettings(settings);
+      setMessage("");
     } catch {
       setEntries([]);
       setPrivacySettings(null);
@@ -141,6 +151,8 @@ export default function JournalWriter() {
           {message}
         </div>
       )}
+
+      <EncryptionGate onUnlocked={load} />
 
       {!editing && (
         <div className="card">

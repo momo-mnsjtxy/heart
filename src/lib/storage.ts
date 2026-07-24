@@ -1,5 +1,11 @@
 import { openDB, type IDBPDatabase } from "idb";
-import type { ChatSession, MoodEntry, JournalEntry, PracticeLog, PrivacySettings } from "@/types";
+import type {
+  ChatSession,
+  MoodEntry,
+  JournalEntry,
+  PracticeLog,
+  PrivacySettings,
+} from "@/types";
 import {
   createWrappedKey,
   unwrapDataKey,
@@ -14,6 +20,8 @@ const DB_VERSION = 3;
 const META_WRAPPED_KEY = "wrappedKey";
 const SESSION_UNLOCK_KEY = "heart-data-key-unlocked";
 
+type StoreName = "sessions" | "moods" | "journals" | "practices";
+
 interface HeartDB {
   sessions: { key: string; value: string };
   moods: { key: string; value: string };
@@ -22,6 +30,17 @@ interface HeartDB {
   settings: { key: string; value: PrivacySettings };
   meta: { key: string; value: string };
 }
+
+export interface ExportPayload {
+  sessions?: ChatSession[];
+  moods?: MoodEntry[];
+  journals?: JournalEntry[];
+  practices?: PracticeLog[];
+  settings?: Partial<PrivacySettings>;
+  exportedAt?: string;
+}
+
+export type EncryptionStatus = "off" | "locked" | "unlocked";
 
 let dbPromise: Promise<IDBPDatabase<HeartDB>> | null = null;
 
@@ -38,7 +57,6 @@ function getDB(): Promise<IDBPDatabase<HeartDB>> {
           db.createObjectStore("settings");
           db.createObjectStore("meta");
         }
-        // v2: remove legacy plaintext passphrase if present (handled at runtime)
         if (oldVersion < 3) {
           if (!db.objectStoreNames.contains("journals")) {
             db.createObjectStore("journals");
@@ -66,15 +84,6 @@ async function getWrappedKeyMaterial(): Promise<WrappedKeyMaterial | null> {
 
 async function getDataKey(): Promise<CryptoKey | null> {
   if (memoryDataKey) return memoryDataKey;
-
-  // Tab-lifetime unlock flag only — the raw key itself stays in memory for this page load.
-  // If the page reloads, the user must unlock again (or we keep a sessionStorage hint).
-  if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(SESSION_UNLOCK_KEY) === "1") {
-    // Key was unlocked this tab session but lost from memory after HMR/reload —
-    // caller must unlock again; we only use this as a UI hint via isEncryptionUnlocked.
-    return null;
-  }
-
   return null;
 }
 
@@ -85,6 +94,32 @@ export function isEncryptionUnlocked(): boolean {
 export async function isEncryptionConfigured(): Promise<boolean> {
   const material = await getWrappedKeyMaterial();
   return material !== null;
+}
+
+/** Was encryption unlocked earlier in this tab (lost after reload until re-entry). */
+export function wasEncryptionUnlockedThisTab(): boolean {
+  if (typeof sessionStorage === "undefined") return false;
+  return sessionStorage.getItem(SESSION_UNLOCK_KEY) === "1";
+}
+
+export async function getEncryptionStatus(): Promise<EncryptionStatus> {
+  const configured = await isEncryptionConfigured();
+  if (!configured) return "off";
+  return memoryDataKey ? "unlocked" : "locked";
+}
+
+/**
+ * When encryption is configured, writes require an unlocked key.
+ * Otherwise plaintext storage is allowed.
+ */
+async function requireDataKeyForWrite(): Promise<CryptoKey | null> {
+  const configured = await isEncryptionConfigured();
+  if (!configured) return null;
+  const key = await getDataKey();
+  if (!key) {
+    throw new Error("数据已加密，请先在隐私中心解锁");
+  }
+  return key;
 }
 
 async function encrypt<T>(data: T, key: CryptoKey | null): Promise<string> {
@@ -104,13 +139,65 @@ async function decrypt<T>(stored: string, key: CryptoKey | null): Promise<T> {
     return JSON.parse(json) as T;
   }
 
-  // Legacy plaintext JSON (pre-encryption or encryption disabled)
   return JSON.parse(stored) as T;
+}
+
+function entryId(store: StoreName, entry: unknown): string {
+  const record = entry as { id: string };
+  if (!record?.id || typeof record.id !== "string") {
+    throw new Error(`导入数据缺少有效 id（${store}）`);
+  }
+  return record.id;
+}
+
+/**
+ * Re-encrypt or decrypt every row in a store using the given key.
+ * `mode: "encrypt"` writes ciphertext; `mode: "decrypt"` writes plaintext JSON.
+ */
+async function migrateStore(
+  store: StoreName,
+  key: CryptoKey,
+  mode: "encrypt" | "decrypt"
+): Promise<number> {
+  const db = await getDB();
+  const keys = await db.getAllKeys(store);
+  let migrated = 0;
+
+  for (const id of keys) {
+    const stored = await db.get(store, id);
+    if (stored === undefined) continue;
+
+    let parsed: unknown;
+    if (isEncryptedPayload(stored)) {
+      parsed = JSON.parse(await decryptWithKey(stored, key));
+    } else {
+      parsed = JSON.parse(stored);
+    }
+
+    const next =
+      mode === "encrypt" ? await encryptWithKey(JSON.stringify(parsed), key) : JSON.stringify(parsed);
+    await db.put(store, next, id);
+    migrated += 1;
+  }
+
+  return migrated;
+}
+
+async function migrateAllStores(
+  key: CryptoKey,
+  mode: "encrypt" | "decrypt"
+): Promise<{ sessions: number; moods: number; journals: number; practices: number }> {
+  const stores: StoreName[] = ["sessions", "moods", "journals", "practices"];
+  const counts = { sessions: 0, moods: 0, journals: 0, practices: 0 };
+  for (const store of stores) {
+    counts[store] = await migrateStore(store, key, mode);
+  }
+  return counts;
 }
 
 export async function saveSession(session: ChatSession): Promise<void> {
   const db = await getDB();
-  const key = await getDataKey();
+  const key = await requireDataKeyForWrite();
   const encrypted = await encrypt(session, key);
   await db.put("sessions", encrypted, session.id);
 }
@@ -143,7 +230,7 @@ export async function deleteSession(id: string): Promise<void> {
 
 export async function saveMoodEntry(entry: MoodEntry): Promise<void> {
   const db = await getDB();
-  const key = await getDataKey();
+  const key = await requireDataKeyForWrite();
   const encrypted = await encrypt(entry, key);
   await db.put("moods", encrypted, entry.id);
 }
@@ -168,7 +255,7 @@ export async function deleteMoodEntry(id: string): Promise<void> {
 
 export async function saveJournalEntry(entry: JournalEntry): Promise<void> {
   const db = await getDB();
-  const key = await getDataKey();
+  const key = await requireDataKeyForWrite();
   const encrypted = await encrypt(entry, key);
   await db.put("journals", encrypted, entry.id);
 }
@@ -193,7 +280,7 @@ export async function deleteJournalEntry(id: string): Promise<void> {
 
 export async function savePracticeLog(log: PracticeLog): Promise<void> {
   const db = await getDB();
-  const key = await getDataKey();
+  const key = await requireDataKeyForWrite();
   const encrypted = await encrypt(log, key);
   await db.put("practices", encrypted, log.id);
 }
@@ -232,15 +319,18 @@ export async function savePrivacySettings(settings: PrivacySettings): Promise<vo
 }
 
 /**
- * Enable encryption: generate a random data key, wrap it with the passphrase,
- * and persist only the wrapped material + verifier. Passphrase is never stored.
+ * Enable encryption: wrap a random data key, then migrate existing plaintext rows to ciphertext.
  */
-export async function setEncryptionPassphrase(passphrase: string): Promise<void> {
+export async function setEncryptionPassphrase(passphrase: string): Promise<{
+  sessions: number;
+  moods: number;
+  journals: number;
+  practices: number;
+}> {
   const db = await getDB();
   const { material, dataKey } = await createWrappedKey(passphrase);
 
   await db.put("meta", JSON.stringify(material), META_WRAPPED_KEY);
-  // Remove legacy plaintext passphrase if any
   await db.delete("meta", "passphrase");
 
   memoryDataKey = dataKey;
@@ -248,8 +338,11 @@ export async function setEncryptionPassphrase(passphrase: string): Promise<void>
     sessionStorage.setItem(SESSION_UNLOCK_KEY, "1");
   }
 
+  const migrated = await migrateAllStores(dataKey, "encrypt");
+
   const settings = await getPrivacySettings();
   await savePrivacySettings({ ...settings, encryptionEnabled: true });
+  return migrated;
 }
 
 /** Unlock encryption for this browser session using the passphrase. */
@@ -265,19 +358,46 @@ export async function unlockEncryption(passphrase: string): Promise<void> {
   }
 }
 
-export async function clearEncryptionPassphrase(): Promise<void> {
+/**
+ * Disable encryption: decrypt all rows to plaintext, then discard the wrapped key.
+ * Requires an unlocked session.
+ */
+export async function clearEncryptionPassphrase(): Promise<{
+  sessions: number;
+  moods: number;
+  journals: number;
+  practices: number;
+}> {
+  const configured = await isEncryptionConfigured();
+  if (!configured) {
+    return { sessions: 0, moods: 0, journals: 0, practices: 0 };
+  }
+
+  const key = memoryDataKey;
+  if (!key) {
+    throw new Error("请先解锁加密后再关闭，以免无法解密已有数据");
+  }
+
+  const migrated = await migrateAllStores(key, "decrypt");
+
   const db = await getDB();
   await db.delete("meta", META_WRAPPED_KEY);
-  await db.delete("meta", "passphrase"); // legacy cleanup
+  await db.delete("meta", "passphrase");
   memoryDataKey = null;
   if (typeof sessionStorage !== "undefined") {
     sessionStorage.removeItem(SESSION_UNLOCK_KEY);
   }
   const settings = await getPrivacySettings();
   await savePrivacySettings({ ...settings, encryptionEnabled: false });
+  return migrated;
 }
 
 export async function exportAllData(): Promise<string> {
+  const status = await getEncryptionStatus();
+  if (status === "locked") {
+    throw new Error("数据已加密，请先解锁后再导出");
+  }
+
   const sessions = await getAllSessions();
   const moods = await getAllMoodEntries();
   const journals = await getAllJournalEntries();
@@ -288,6 +408,101 @@ export async function exportAllData(): Promise<string> {
     null,
     2
   );
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function parseExportPayload(json: string): ExportPayload {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error("文件不是有效的 JSON");
+  }
+
+  if (!isObject(parsed)) {
+    throw new Error("备份格式无效");
+  }
+
+  const payload = parsed as ExportPayload;
+  for (const key of ["sessions", "moods", "journals", "practices"] as const) {
+    if (payload[key] !== undefined && !Array.isArray(payload[key])) {
+      throw new Error(`备份字段 ${key} 必须是数组`);
+    }
+  }
+  if (payload.settings !== undefined && !isObject(payload.settings)) {
+    throw new Error("备份字段 settings 必须是对象");
+  }
+
+  return payload;
+}
+
+/**
+ * Import a previously exported JSON backup.
+ * - merge: upsert by id
+ * - replace: clear stores first, then write
+ * Encryption settings in the backup are ignored; current local encryption policy applies.
+ */
+export async function importAllData(
+  json: string,
+  mode: "merge" | "replace" = "merge"
+): Promise<{ sessions: number; moods: number; journals: number; practices: number }> {
+  const status = await getEncryptionStatus();
+  if (status === "locked") {
+    throw new Error("数据已加密，请先解锁后再导入");
+  }
+
+  const payload = parseExportPayload(json);
+  const db = await getDB();
+  const writeKey = await requireDataKeyForWrite();
+
+  if (mode === "replace") {
+    await db.clear("sessions");
+    await db.clear("moods");
+    await db.clear("journals");
+    await db.clear("practices");
+  }
+
+  const counts = { sessions: 0, moods: 0, journals: 0, practices: 0 };
+
+  for (const session of payload.sessions || []) {
+    const id = entryId("sessions", session);
+    await db.put("sessions", await encrypt({ ...session, id }, writeKey), id);
+    counts.sessions += 1;
+  }
+  for (const mood of payload.moods || []) {
+    const id = entryId("moods", mood);
+    await db.put("moods", await encrypt({ ...mood, id }, writeKey), id);
+    counts.moods += 1;
+  }
+  for (const journal of payload.journals || []) {
+    const id = entryId("journals", journal);
+    await db.put("journals", await encrypt({ ...journal, id }, writeKey), id);
+    counts.journals += 1;
+  }
+  for (const practice of payload.practices || []) {
+    const id = entryId("practices", practice);
+    await db.put("practices", await encrypt({ ...practice, id }, writeKey), id);
+    counts.practices += 1;
+  }
+
+  if (payload.settings) {
+    const current = await getPrivacySettings();
+    const next: PrivacySettings = {
+      ...current,
+      saveConversations: payload.settings.saveConversations ?? current.saveConversations,
+      saveMoodData: payload.settings.saveMoodData ?? current.saveMoodData,
+      saveJournalData: payload.settings.saveJournalData ?? current.saveJournalData,
+      ephemeralMode: payload.settings.ephemeralMode ?? current.ephemeralMode,
+      // Keep local encryption state; do not import encryptionEnabled from backup
+      encryptionEnabled: current.encryptionEnabled,
+    };
+    await savePrivacySettings(next);
+  }
+
+  return counts;
 }
 
 export async function deleteAllData(): Promise<void> {

@@ -6,7 +6,14 @@ import { Plus, Trash2, TrendingUp, Sparkles } from "lucide-react";
 import type { MoodEntry, PrivacySettings } from "@/types";
 import { MOOD_LABELS, MOOD_EMOJIS, MOOD_COLORS, MOOD_TAGS } from "@/lib/counselor";
 import { generateId, formatDateTime } from "@/lib/id";
-import { saveMoodEntry, getAllMoodEntries, deleteMoodEntry, getPrivacySettings } from "@/lib/storage";
+import {
+  saveMoodEntry,
+  getAllMoodEntries,
+  deleteMoodEntry,
+  getPrivacySettings,
+  getEncryptionStatus,
+} from "@/lib/storage";
+import EncryptionGate from "@/components/EncryptionGate";
 
 export default function MoodTracker() {
   const [entries, setEntries] = useState<MoodEntry[]>([]);
@@ -15,6 +22,8 @@ export default function MoodTracker() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
+  const [message, setMessage] = useState("");
+  const [encryptionLocked, setEncryptionLocked] = useState(false);
 
   useEffect(() => {
     loadEntries();
@@ -22,8 +31,21 @@ export default function MoodTracker() {
   }, []);
 
   async function loadEntries() {
-    const all = await getAllMoodEntries();
-    setEntries(all);
+    const status = await getEncryptionStatus();
+    setEncryptionLocked(status === "locked");
+    if (status === "locked") {
+      setEntries([]);
+      setMessage("情绪记录已加密，请先解锁后查看");
+      return;
+    }
+    try {
+      const all = await getAllMoodEntries();
+      setEntries(all);
+      setMessage("");
+    } catch {
+      setEntries([]);
+      setMessage("无法读取情绪记录，请检查隐私中心加密状态");
+    }
   }
 
   async function loadPrivacySettings() {
@@ -40,21 +62,36 @@ export default function MoodTracker() {
       timestamp: Date.now(),
     };
 
-    // Respect privacy settings: only persist when "保存情绪数据" is enabled
-    if (privacySettings?.saveMoodData !== false) {
-      await saveMoodEntry(entry);
-      await loadEntries();
+    if (privacySettings?.saveMoodData === false) {
+      setMessage("已关闭情绪数据保存，本次记录不会写入本地");
+      setNote("");
+      setSelectedTags([]);
+      setSelectedMood(3);
+      setShowForm(false);
+      return;
     }
 
-    setNote("");
-    setSelectedTags([]);
-    setSelectedMood(3);
-    setShowForm(false);
+    try {
+      await saveMoodEntry(entry);
+      await loadEntries();
+      setNote("");
+      setSelectedTags([]);
+      setSelectedMood(3);
+      setShowForm(false);
+      setMessage("情绪已保存到本地");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "保存失败";
+      setMessage(msg.includes("解锁") ? msg : "保存失败：如已启用加密，请先解锁");
+    }
   }
 
   async function handleDelete(id: string) {
-    await deleteMoodEntry(id);
-    await loadEntries();
+    try {
+      await deleteMoodEntry(id);
+      await loadEntries();
+    } catch {
+      setMessage("删除失败：如已启用加密，请先解锁");
+    }
   }
 
   function toggleTag(tag: string) {
@@ -101,11 +138,24 @@ export default function MoodTracker() {
               : "追踪你的情绪变化，数据仅存储在本地"}
           </p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2 text-sm">
+        <button
+          type="button"
+          onClick={() => setShowForm(!showForm)}
+          className="btn-primary flex items-center gap-2 text-sm"
+          disabled={encryptionLocked}
+        >
           <Plus className="w-4 h-4" />
           记录情绪
         </button>
       </div>
+
+      <EncryptionGate onUnlocked={loadEntries} />
+
+      {message && (
+        <div className="text-sm text-teal-deep bg-teal-soft/80 border border-[var(--line)] rounded-xl px-4 py-3 animate-fade-in-up">
+          {message}
+        </div>
+      )}
 
       {/* Stats */}
       {entries.length > 0 && (
@@ -150,9 +200,17 @@ export default function MoodTracker() {
             <TrendingUp className="w-5 h-5 text-teal" />
             <h2 className="font-medium text-ink">近期趋势</h2>
           </div>
-          <div className="flex items-end gap-2 h-32">
+          <div
+            className="flex items-end gap-2 h-32"
+            role="img"
+            aria-label={`近期 ${recentEntries.length} 条情绪趋势`}
+          >
             {recentEntries.map((entry) => (
-              <div key={entry.id} className="flex-1 flex flex-col items-center gap-1">
+              <div
+                key={entry.id}
+                className="flex-1 flex flex-col items-center gap-1"
+                title={`${MOOD_LABELS[entry.mood - 1]} · ${formatDateTime(entry.timestamp)}`}
+              >
                 <div
                   className="w-full rounded-t-lg transition-all duration-500"
                   style={{
@@ -160,8 +218,14 @@ export default function MoodTracker() {
                     backgroundColor: MOOD_COLORS[entry.mood - 1],
                     minHeight: "8px",
                   }}
+                  aria-hidden="true"
                 />
-                <span className="text-xs">{MOOD_EMOJIS[entry.mood - 1]}</span>
+                <span className="text-xs" aria-hidden="true">
+                  {MOOD_EMOJIS[entry.mood - 1]}
+                </span>
+                <span className="sr-only">
+                  {MOOD_LABELS[entry.mood - 1]}，{formatDateTime(entry.timestamp)}
+                </span>
               </div>
             ))}
           </div>
@@ -248,8 +312,10 @@ export default function MoodTracker() {
               )}
             </div>
             <button
+              type="button"
               onClick={() => handleDelete(entry.id)}
               className="text-ink-soft/70 hover:text-red-500 transition-colors p-1"
+              aria-label={`删除情绪记录：${MOOD_LABELS[entry.mood - 1]}`}
             >
               <Trash2 className="w-4 h-4" />
             </button>

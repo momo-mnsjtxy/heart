@@ -25,6 +25,7 @@ import {
 } from "@/lib/practices";
 import { generateId, formatShortDateTime } from "@/lib/id";
 import { savePracticeLog, getAllPracticeLogs } from "@/lib/storage";
+import EncryptionGate from "@/components/EncryptionGate";
 
 type Tab = "breathing" | "grounding" | "body-scan" | "coping";
 
@@ -38,9 +39,21 @@ const TABS: { id: Tab; label: string; icon: typeof Wind }[] = [
 export default function PracticeStudio() {
   const [tab, setTab] = useState<Tab>("breathing");
   const [logs, setLogs] = useState<PracticeLog[]>([]);
+  const [saveHint, setSaveHint] = useState("");
+
+  async function refreshLogs() {
+    try {
+      const all = await getAllPracticeLogs();
+      setLogs(all);
+      setSaveHint("");
+    } catch {
+      setLogs([]);
+      setSaveHint("练习记录已加密或无法读取，请先在上方解锁");
+    }
+  }
 
   useEffect(() => {
-    getAllPracticeLogs().then(setLogs).catch(() => setLogs([]));
+    refreshLogs();
   }, []);
 
   async function recordLog(
@@ -60,9 +73,10 @@ export default function PracticeStudio() {
     try {
       await savePracticeLog(log);
       setLogs((prev) => [log, ...prev].slice(0, 20));
+      setSaveHint("");
     } catch {
-      // Local save failed (e.g. locked encryption) — still show ephemeral feedback
       setLogs((prev) => [log, ...prev].slice(0, 20));
+      setSaveHint("本次练习未写入本地：如已启用加密，请先解锁");
     }
   }
 
@@ -84,13 +98,23 @@ export default function PracticeStudio() {
         </Link>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <EncryptionGate onUnlocked={refreshLogs} />
+      {saveHint && (
+        <p className="text-sm text-teal-deep bg-teal-soft/80 border border-[var(--line)] rounded-xl px-4 py-3">
+          {saveHint}
+        </p>
+      )}
+
+      <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="练习类型">
         {TABS.map((item) => {
           const Icon = item.icon;
           const active = tab === item.id;
           return (
             <button
               key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
               onClick={() => setTab(item.id)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
                 active
@@ -98,7 +122,7 @@ export default function PracticeStudio() {
                   : "bg-white/70 text-ink-soft border border-[var(--line)] hover:bg-white/45"
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-4 h-4" aria-hidden="true" />
               {item.label}
             </button>
           );
@@ -352,7 +376,7 @@ function GroundingPanel({
           <div
             key={s.sense}
             className={`flex-1 h-1.5 rounded-full ${
-              i < step ? "bg-teal-mid" : i === step ? "bg-teal-soft0" : "bg-gray-200"
+              i < step ? "bg-teal-mid" : i === step ? "bg-teal" : "bg-gray-200"
             }`}
           />
         ))}
@@ -384,6 +408,7 @@ function GroundingPanel({
 
           <div className="flex gap-3">
             <button
+              type="button"
               disabled={step === 0}
               onClick={() => setStep((s) => Math.max(0, s - 1))}
               className="btn-secondary flex-1 disabled:opacity-40"
@@ -391,11 +416,29 @@ function GroundingPanel({
               上一步
             </button>
             <button
+              type="button"
               disabled={!stepDone}
-              onClick={() => setStep((s) => Math.min(GROUNDING_STEPS.length - 1, s + 1))}
+              onClick={() => {
+                if (step >= GROUNDING_STEPS.length - 1) {
+                  // Last step complete — checkboxes drive allDone; nudge final checks if needed
+                  setChecked((prev) => {
+                    const next = prev.map((row) => [...row]);
+                    next[step] = next[step].map(() => true);
+                    return next;
+                  });
+                  return;
+                }
+                setStep((s) => Math.min(GROUNDING_STEPS.length - 1, s + 1));
+              }}
               className="btn-primary flex-1 flex items-center justify-center gap-1 disabled:opacity-40"
             >
-              下一步 <ChevronRight className="w-4 h-4" />
+              {step >= GROUNDING_STEPS.length - 1 ? (
+                "完成"
+              ) : (
+                <>
+                  下一步 <ChevronRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
         </>
@@ -425,28 +468,50 @@ function BodyScanPanel({
 }) {
   const [step, setStep] = useState(0);
   const [running, setRunning] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [done, setDone] = useState(false);
   const startedAt = useRef<number | null>(null);
+  const pausedAccumMs = useRef(0);
+  const pauseStartedAt = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!running) return;
+    if (!running || paused) return;
     if (step >= BODY_SCAN_STEPS.length) {
       setRunning(false);
+      setPaused(false);
       setDone(true);
       const elapsed = startedAt.current
-        ? Math.round((Date.now() - startedAt.current) / 1000)
+        ? Math.round((Date.now() - startedAt.current - pausedAccumMs.current) / 1000)
         : BODY_SCAN_STEPS.length * 12;
-      onComplete("body-scan", "身体扫描", elapsed);
+      onComplete("body-scan", "身体扫描", Math.max(elapsed, 1));
       return;
     }
     const timer = setTimeout(() => setStep((s) => s + 1), 12000);
     return () => clearTimeout(timer);
-  }, [running, step, onComplete]);
+  }, [running, paused, step, onComplete]);
 
   function start() {
     setDone(false);
     setStep(0);
+    setPaused(false);
+    pausedAccumMs.current = 0;
+    pauseStartedAt.current = null;
     startedAt.current = Date.now();
+    setRunning(true);
+  }
+
+  function pause() {
+    pauseStartedAt.current = Date.now();
+    setPaused(true);
+    setRunning(false);
+  }
+
+  function resume() {
+    if (pauseStartedAt.current) {
+      pausedAccumMs.current += Date.now() - pauseStartedAt.current;
+      pauseStartedAt.current = null;
+    }
+    setPaused(false);
     setRunning(true);
   }
 
@@ -471,30 +536,44 @@ function BodyScanPanel({
             key={step}
             className="text-lg text-ink leading-relaxed animate-fade-in-up"
           >
-            {running ? BODY_SCAN_STEPS[Math.min(step, BODY_SCAN_STEPS.length - 1)] : "找一个舒适的姿势，准备开始。"}
+            {paused
+              ? "已暂停。准备好后继续。"
+              : running
+                ? BODY_SCAN_STEPS[Math.min(step, BODY_SCAN_STEPS.length - 1)]
+                : "找一个舒适的姿势，准备开始。"}
           </p>
         )}
       </div>
 
-      {running && !done && (
+      {(running || paused) && !done && (
         <div className="w-full bg-mist/60 rounded-full h-2 overflow-hidden">
           <div
-            className="h-full bg-teal-soft0 transition-all duration-500"
+            className="h-full bg-teal transition-all duration-500"
             style={{ width: `${((step + 1) / BODY_SCAN_STEPS.length) * 100}%` }}
           />
         </div>
       )}
 
       <div className="flex gap-3 justify-center">
-        {!running || done ? (
-          <button onClick={start} className="btn-primary flex items-center gap-2">
+        {done ? (
+          <button type="button" onClick={start} className="btn-primary flex items-center gap-2">
             <Play className="w-4 h-4" />
-            {done ? "再练一次" : "开始扫描"}
+            再练一次
           </button>
-        ) : (
-          <button onClick={() => setRunning(false)} className="btn-secondary flex items-center gap-2">
+        ) : paused ? (
+          <button type="button" onClick={resume} className="btn-primary flex items-center gap-2">
+            <Play className="w-4 h-4" />
+            继续
+          </button>
+        ) : running ? (
+          <button type="button" onClick={pause} className="btn-secondary flex items-center gap-2">
             <Pause className="w-4 h-4" />
             暂停
+          </button>
+        ) : (
+          <button type="button" onClick={start} className="btn-primary flex items-center gap-2">
+            <Play className="w-4 h-4" />
+            开始扫描
           </button>
         )}
       </div>

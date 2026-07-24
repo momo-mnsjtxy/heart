@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Shield, Lock, Download, Trash2, Eye, EyeOff,
-  CheckCircle, AlertTriangle, Database, Key,
+  CheckCircle, AlertTriangle, Database, Key, Upload,
 } from "lucide-react";
 import type { PrivacySettings } from "@/types";
 import {
   getPrivacySettings, savePrivacySettings, exportAllData,
   deleteAllData, getStorageStats, setEncryptionPassphrase,
   clearEncryptionPassphrase, unlockEncryption, isEncryptionUnlocked,
+  importAllData,
 } from "@/lib/storage";
 
 export default function PrivacyDashboard() {
@@ -27,7 +28,12 @@ export default function PrivacyDashboard() {
   const [showPassphrase, setShowPassphrase] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [importMode, setImportMode] = useState<"merge" | "replace">("merge");
+  const [pendingImport, setPendingImport] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
@@ -57,14 +63,23 @@ export default function PrivacyDashboard() {
       showMessage("两次输入的密码不一致");
       return;
     }
+    setBusy(true);
     try {
-      await setEncryptionPassphrase(passphrase);
+      const migrated = await setEncryptionPassphrase(passphrase);
       setPassphrase("");
       setConfirmPassphrase("");
       await loadData();
-      showMessage("加密已启用。密码不会被存储，请牢记您的密码");
+      const total =
+        migrated.sessions + migrated.moods + migrated.journals + migrated.practices;
+      showMessage(
+        total > 0
+          ? `加密已启用，已迁移 ${total} 条本地记录。密码不会被存储，请牢记您的密码`
+          : "加密已启用。密码不会被存储，请牢记您的密码"
+      );
     } catch {
       showMessage("启用加密失败，请重试");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -84,10 +99,27 @@ export default function PrivacyDashboard() {
   }
 
   async function handleDisableEncryption() {
-    await clearEncryptionPassphrase();
-    setUnlocked(false);
-    await loadData();
-    showMessage("加密已关闭");
+    if (!unlocked) {
+      showMessage("请先解锁后再关闭加密，以便解密现有数据");
+      return;
+    }
+    setBusy(true);
+    try {
+      const migrated = await clearEncryptionPassphrase();
+      setUnlocked(false);
+      await loadData();
+      const total =
+        migrated.sessions + migrated.moods + migrated.journals + migrated.practices;
+      showMessage(
+        total > 0
+          ? `加密已关闭，已将 ${total} 条记录还原为明文本地存储`
+          : "加密已关闭"
+      );
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : "关闭加密失败");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleExport() {
@@ -101,8 +133,47 @@ export default function PrivacyDashboard() {
       a.click();
       URL.revokeObjectURL(url);
       showMessage("数据已导出");
-    } catch {
-      showMessage("导出失败：如已启用加密，请先解锁");
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : "导出失败：如已启用加密，请先解锁");
+    }
+  }
+
+  function handleImportPick(file: File | null) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === "string" ? reader.result : "";
+      if (!text) {
+        showMessage("无法读取文件");
+        return;
+      }
+      setPendingImport(text);
+      setImportMode("merge");
+      setShowImportConfirm(true);
+    };
+    reader.onerror = () => showMessage("读取文件失败");
+    reader.readAsText(file);
+  }
+
+  async function handleImportConfirm() {
+    if (!pendingImport) return;
+    setBusy(true);
+    try {
+      const counts = await importAllData(pendingImport, importMode);
+      setShowImportConfirm(false);
+      setPendingImport(null);
+      await loadData();
+      const total = counts.sessions + counts.moods + counts.journals + counts.practices;
+      showMessage(
+        importMode === "replace"
+          ? `已替换导入 ${total} 条记录`
+          : `已合并导入 ${total} 条记录`
+      );
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : "导入失败");
+    } finally {
+      setBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -116,7 +187,7 @@ export default function PrivacyDashboard() {
 
   function showMessage(msg: string) {
     setMessage(msg);
-    setTimeout(() => setMessage(""), 3000);
+    setTimeout(() => setMessage(""), 4500);
   }
 
   if (!settings) return null;
@@ -126,7 +197,7 @@ export default function PrivacyDashboard() {
     { icon: Lock, title: "客户端加密", desc: "随机数据密钥经密码包裹后存储，密码本身永不落盘" },
     { icon: Eye, title: "零追踪", desc: "无 Cookie 追踪、无分析工具、无第三方数据共享" },
     { icon: Shield, title: "无痕模式", desc: "支持完全不保存对话的临时咨询模式" },
-    { icon: Trash2, title: "完全控制", desc: "随时导出或永久删除您的所有数据" },
+    { icon: Trash2, title: "完全控制", desc: "随时导出、导入恢复或永久删除您的所有数据" },
     { icon: Key, title: "无需注册", desc: "匿名使用，无需提供任何个人信息" },
   ];
 
@@ -139,7 +210,7 @@ export default function PrivacyDashboard() {
 
       {message && (
         <div className="bg-teal-soft text-teal-deep px-4 py-3 rounded-xl border border-[var(--line)] flex items-center gap-2 animate-fade-in-up">
-          <CheckCircle className="w-4 h-4" />
+          <CheckCircle className="w-4 h-4 shrink-0" />
           {message}
         </div>
       )}
@@ -226,7 +297,7 @@ export default function PrivacyDashboard() {
               加密已启用 (AES-256-GCM · 密码不落盘)
             </div>
             <p className="text-xs text-ink-soft">
-              仅存储经密码包裹的随机数据密钥；密码本身不会写入 IndexedDB。刷新页面后需重新解锁。
+              启用时会迁移现有明文记录；关闭前需解锁，以便还原为明文。刷新页面后需重新解锁。
             </p>
 
             {!unlocked && (
@@ -237,21 +308,27 @@ export default function PrivacyDashboard() {
                   onChange={(e) => setUnlockPassphrase(e.target.value)}
                   placeholder="输入密码以解锁本会话"
                   className="input-field"
+                  aria-label="解锁密码"
                 />
-                <button onClick={handleUnlock} className="btn-primary text-sm">
+                <button type="button" onClick={handleUnlock} className="btn-primary text-sm">
                   解锁加密数据
                 </button>
               </div>
             )}
 
-            <button onClick={handleDisableEncryption} className="btn-danger text-sm">
-              关闭加密
+            <button
+              type="button"
+              onClick={handleDisableEncryption}
+              disabled={busy}
+              className="btn-danger text-sm"
+            >
+              {busy ? "处理中…" : "关闭加密"}
             </button>
           </div>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-ink-soft">
-              设置加密密码后，将生成随机数据密钥并用您的密码包裹后存储。密码不会上传，也不会以明文保存在本地。
+              设置加密密码后，将生成随机数据密钥并用您的密码包裹后存储，同时把已有本地记录加密。密码不会上传，也不会以明文保存在本地。
             </p>
             <div className="relative">
               <input
@@ -260,11 +337,13 @@ export default function PrivacyDashboard() {
                 onChange={(e) => setPassphrase(e.target.value)}
                 placeholder="设置加密密码（至少 8 位）"
                 className="input-field pr-10"
+                aria-label="设置加密密码"
               />
               <button
                 onClick={() => setShowPassphrase(!showPassphrase)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft/70"
                 type="button"
+                aria-label={showPassphrase ? "隐藏密码" : "显示密码"}
               >
                 {showPassphrase ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -275,9 +354,15 @@ export default function PrivacyDashboard() {
               onChange={(e) => setConfirmPassphrase(e.target.value)}
               placeholder="确认密码"
               className="input-field"
+              aria-label="确认加密密码"
             />
-            <button onClick={handleEnableEncryption} className="btn-primary text-sm">
-              启用加密
+            <button
+              type="button"
+              onClick={handleEnableEncryption}
+              disabled={busy}
+              className="btn-primary text-sm"
+            >
+              {busy ? "正在加密现有数据…" : "启用加密"}
             </button>
           </div>
         )}
@@ -286,11 +371,31 @@ export default function PrivacyDashboard() {
       <div className="card space-y-4">
         <h2 className="font-medium text-ink">数据管理</h2>
         <div className="flex flex-wrap gap-3">
-          <button onClick={handleExport} className="btn-secondary flex items-center gap-2 text-sm">
+          <button
+            type="button"
+            onClick={handleExport}
+            className="btn-secondary flex items-center gap-2 text-sm"
+          >
             <Download className="w-4 h-4" />
             导出所有数据
           </button>
           <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="btn-secondary flex items-center gap-2 text-sm"
+          >
+            <Upload className="w-4 h-4" />
+            导入备份
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => handleImportPick(e.target.files?.[0] || null)}
+          />
+          <button
+            type="button"
             onClick={() => setShowDeleteConfirm(true)}
             className="btn-danger flex items-center gap-2 text-sm"
           >
@@ -300,19 +405,92 @@ export default function PrivacyDashboard() {
         </div>
       </div>
 
+      {showImportConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-title"
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-fade-in-up space-y-4"
+          >
+            <div className="flex items-center gap-2 text-teal-deep">
+              <Upload className="w-5 h-5" />
+              <h2 id="import-title" className="text-lg font-bold">确认导入</h2>
+            </div>
+            <p className="text-ink-soft text-sm">
+              选择导入方式。合并会按 id 覆盖同名记录；替换会先清空本地对话、情绪、日记与练习后再写入。
+            </p>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
+                <input
+                  type="radio"
+                  name="import-mode"
+                  checked={importMode === "merge"}
+                  onChange={() => setImportMode("merge")}
+                />
+                合并导入（推荐）
+              </label>
+              <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
+                <input
+                  type="radio"
+                  name="import-mode"
+                  checked={importMode === "replace"}
+                  onChange={() => setImportMode("replace")}
+                />
+                替换全部内容
+              </label>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleImportConfirm}
+                disabled={busy}
+                className="btn-primary flex-1"
+              >
+                {busy ? "导入中…" : "确认导入"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportConfirm(false);
+                  setPendingImport(null);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                className="btn-secondary flex-1"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-fade-in-up">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-title"
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-fade-in-up"
+          >
             <div className="flex items-center gap-2 text-red-600 mb-4">
               <AlertTriangle className="w-5 h-5" />
-              <h2 className="text-lg font-bold">确认删除</h2>
+              <h2 id="delete-title" className="text-lg font-bold">确认删除</h2>
             </div>
             <p className="text-ink-soft text-sm mb-6">
               此操作将永久删除所有本地存储的对话、情绪、日记、练习记录和设置。此操作不可撤销。
             </p>
             <div className="flex gap-3">
-              <button onClick={handleDeleteAll} className="btn-danger flex-1">确认删除</button>
-              <button onClick={() => setShowDeleteConfirm(false)} className="btn-secondary flex-1">取消</button>
+              <button type="button" onClick={handleDeleteAll} className="btn-danger flex-1">
+                确认删除
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="btn-secondary flex-1"
+              >
+                取消
+              </button>
             </div>
           </div>
         </div>
